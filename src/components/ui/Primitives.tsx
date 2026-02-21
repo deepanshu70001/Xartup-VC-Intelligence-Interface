@@ -14,7 +14,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",
+          "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] hover:-translate-y-0.5 surface-pop",
           {
             'bg-indigo-600 text-white hover:bg-indigo-700 border border-transparent': variant === 'primary',
             'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700': variant === 'secondary',
@@ -43,7 +43,7 @@ Button.displayName = 'Button';
 export function Badge({ children, className, variant = 'neutral' }: { children: React.ReactNode, className?: string, variant?: 'neutral' | 'success' | 'warning' | 'indigo' } & React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span className={cn(
-      "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
+      "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-transform duration-200 hover:scale-[1.03]",
       {
         'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200': variant === 'neutral',
         'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': variant === 'success',

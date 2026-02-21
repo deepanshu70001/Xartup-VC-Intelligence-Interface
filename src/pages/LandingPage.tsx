@@ -1,13 +1,35 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Primitives';
 import { ArrowRight, Zap, Shield, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BrandLogo } from '../components/BrandLogo';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { useTheme } from '../context/ThemeContext';
 
 export default function LandingPage() {
   const { user, isLoading } = useAuth();
+  const { theme } = useTheme();
+  const [systemPrefersDark, setSystemPrefersDark] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => setSystemPrefersDark(media.matches);
+    apply();
+
+    const listener = () => apply();
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, []);
+
+  const resolvedTheme = useMemo<'light' | 'dark'>(() => {
+    if (theme === 'system') return systemPrefersDark ? 'dark' : 'light';
+    return theme;
+  }, [theme, systemPrefersDark]);
+
+  const dashboardPreviewSrc =
+    resolvedTheme === 'dark' ? '/landing-dashboard-dark.png' : '/landing-dashboard-light.png';
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
@@ -20,12 +42,13 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-white font-sans selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-white font-sans selection:bg-indigo-500/30 ambient-shell">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <BrandLogo />
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Link to="/login">
               <Button variant="ghost" className="text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white">Log In</Button>
             </Link>
@@ -37,7 +60,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6">
+      <section className="pt-32 pb-20 px-6 relative z-10">
         <div className="max-w-5xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -79,7 +102,7 @@ export default function LandingPage() {
             className="mt-20 relative"
           >
             <div className="absolute inset-0 bg-gradient-to-t from-neutral-50 dark:from-neutral-950 to-transparent z-10 h-40 bottom-0 w-full" />
-            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden bg-white dark:bg-neutral-900">
+            <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden bg-white dark:bg-neutral-900 surface-pop gradient-aura">
               <div className="h-12 bg-neutral-100 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-800 flex items-center px-4 gap-2">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-red-400/80" />
@@ -92,9 +115,12 @@ export default function LandingPage() {
               </div>
               <div className="p-2">
                  <img 
-                    src="/landing-dashboard.png"
+                    src={dashboardPreviewSrc}
                     alt="Dashboard Preview" 
                     className="w-full h-auto rounded-lg"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/landing-dashboard.png';
+                    }}
                   />
               </div>
             </div>
