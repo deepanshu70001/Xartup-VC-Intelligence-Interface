@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Bot, Building2, CheckCircle2, SendHorizontal, Sparkles } from 'lucide-react';
 import { Button } from '../components/ui/Primitives';
 import { useApp } from '../context/AppContext';
-import { buildApiUrl, parseApiResponse } from '../lib/api';
+import { buildApiUrl, getAuthHeaders, parseApiResponse } from '../lib/api';
 import { toast } from 'sonner';
 
 interface ChatMessage {
@@ -95,7 +95,7 @@ export default function ScoutAssistantPage() {
     try {
       const response = await fetch(buildApiUrl('/api/chat'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'include',
         body: JSON.stringify({
           message: prompt,

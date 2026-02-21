@@ -92,11 +92,19 @@ async function startServer() {
 
   // Auth Middleware
   const authenticateToken = (req: any, res: any, next: any) => {
-    const token = req.cookies.token;
-    if (!token) return res.sendStatus(401);
+    const authHeader = req.headers.authorization;
+    const bearerToken =
+      typeof authHeader === "string" && authHeader.startsWith("Bearer ")
+        ? authHeader.slice(7).trim()
+        : null;
+    const token = req.cookies.token || bearerToken;
+
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
     jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-      if (err) return res.sendStatus(403);
+      if (err) return res.status(403).json({ error: "Forbidden" });
       req.user = user;
       next();
     });
@@ -133,7 +141,7 @@ async function startServer() {
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
       });
 
-      res.json({ user: { id, name, email } });
+      res.json({ user: { id, name, email }, token });
     } catch (error: any) {
       console.error("Registration error:", error);
       res.status(500).json({ error: "Registration failed" });
@@ -165,7 +173,7 @@ async function startServer() {
         maxAge: 24 * 60 * 60 * 1000
       });
 
-      res.json({ user: { id: user.id, name: user.name, email: user.email } });
+      res.json({ user: { id: user.id, name: user.name, email: user.email }, token });
     } catch (error: any) {
       console.error("Login error:", error);
       res.status(500).json({ error: "Login failed" });

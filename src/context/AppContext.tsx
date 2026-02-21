@@ -4,7 +4,7 @@ import { MOCK_COMPANIES } from '../data/mock';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
-import { buildApiUrl, parseApiResponse } from '../lib/api';
+import { buildApiUrl, getAuthHeaders, parseApiResponse } from '../lib/api';
 
 export interface Thesis {
   sectors: string[];
@@ -353,7 +353,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const response = await fetch(buildApiUrl('/api/enrich'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'include',
         body: JSON.stringify({ url }),
       });

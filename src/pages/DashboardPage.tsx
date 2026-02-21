@@ -12,7 +12,7 @@ import {
   Zap
 } from 'lucide-react';
 import { Button, Badge } from '../components/ui/Primitives';
-import { buildApiUrl, parseApiResponse } from '../lib/api';
+import { buildApiUrl, getAuthHeaders, parseApiResponse } from '../lib/api';
 
 interface LiveFeedItem {
   id: string;
@@ -80,7 +80,7 @@ export default function DashboardPage() {
         }
 
         const url = `${buildApiUrl('/api/live-feed')}?companies=${encodeURIComponent(companyNames)}&limit=10&perCompany=2`;
-        const response = await fetch(url, { credentials: 'include' });
+        const response = await fetch(url, { headers: getAuthHeaders(), credentials: 'include' });
         if (!response.ok) {
           setInternetFeed([]);
           return;

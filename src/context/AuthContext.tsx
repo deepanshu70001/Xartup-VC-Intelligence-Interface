@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { buildApiUrl, parseApiResponse } from '../lib/api';
+import {
+  buildApiUrl,
+  clearStoredAuthToken,
+  getAuthHeaders,
+  parseApiResponse,
+  setStoredAuthToken,
+} from '../lib/api';
 
 interface User {
   id: string;
@@ -32,11 +38,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkAuth = async () => {
     try {
       const res = await fetch(buildApiUrl('/api/auth/me'), {
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
       if (res.ok) {
         const data = await parseApiResponse<{ user: User }>(res);
         setUser(data.user);
+      } else if (res.status === 401 || res.status === 403) {
+        clearStoredAuthToken();
       }
     } catch (error) {
       console.error('Auth check failed', error);
@@ -53,12 +62,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       body: JSON.stringify(credentials),
     });
 
-    const data = await parseApiResponse<{ user?: User; error?: string }>(res);
+    const data = await parseApiResponse<{ user?: User; token?: string; error?: string }>(res);
 
     if (!res.ok) {
       throw new Error(data.error || 'Login failed');
     }
 
+    if (data.token) {
+      setStoredAuthToken(data.token);
+    }
     setUser(data.user);
     toast.success('Welcome back!');
   };
@@ -71,12 +83,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       body: JSON.stringify(credentials),
     });
 
-    const data = await parseApiResponse<{ user?: User; error?: string }>(res);
+    const data = await parseApiResponse<{ user?: User; token?: string; error?: string }>(res);
 
     if (!res.ok) {
       throw new Error(data.error || 'Registration failed');
     }
 
+    if (data.token) {
+      setStoredAuthToken(data.token);
+    }
     setUser(data.user);
     toast.success('Account created successfully!');
   };
@@ -84,8 +99,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await fetch(buildApiUrl('/api/auth/logout'), {
       method: 'POST',
+      headers: getAuthHeaders(),
       credentials: 'include',
     });
+    clearStoredAuthToken();
     setUser(null);
     toast.success('Logged out');
   };
@@ -93,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (data: any) => {
     const res = await fetch(buildApiUrl('/api/auth/profile'), {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       credentials: 'include',
       body: JSON.stringify(data),
     });
