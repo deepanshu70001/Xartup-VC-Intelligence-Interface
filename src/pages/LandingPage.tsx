@@ -2,8 +2,9 @@ import React from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Primitives';
-import { Hexagon, ArrowRight, Search, Zap, Shield, Target } from 'lucide-react';
+import { ArrowRight, Zap, Shield, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { BrandLogo } from '../components/BrandLogo';
 
 export default function LandingPage() {
   const { user, isLoading } = useAuth();
@@ -23,13 +24,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border-b border-neutral-200 dark:border-neutral-800">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative w-8 h-8 flex items-center justify-center">
-              <Hexagon className="w-8 h-8 text-indigo-600 dark:text-indigo-500 fill-indigo-100 dark:fill-indigo-900/30" strokeWidth={1.5} />
-              <span className="absolute text-indigo-600 dark:text-indigo-400 font-bold text-xs">H</span>
-            </div>
-            <span className="font-bold text-xl tracking-tight text-neutral-900 dark:text-white">Harmonic</span>
-          </div>
+          <BrandLogo />
           <div className="flex items-center gap-4">
             <Link to="/login">
               <Button variant="ghost" className="text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white">Log In</Button>
@@ -92,7 +87,7 @@ export default function LandingPage() {
                   <div className="w-3 h-3 rounded-full bg-green-400/80" />
                 </div>
                 <div className="ml-4 flex-1 max-w-lg mx-auto bg-white dark:bg-neutral-900 h-8 rounded-md border border-neutral-200 dark:border-neutral-700 flex items-center px-3 text-xs text-neutral-400">
-                  harmonic.ai/dashboard
+                  flowstack.ai/dashboard
                 </div>
               </div>
               <div className="p-2">
@@ -144,7 +139,7 @@ export default function LandingPage() {
           <div className="relative z-10">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to upgrade your intelligence?</h2>
             <p className="text-indigo-100 text-lg mb-8 max-w-2xl mx-auto">
-              Join forward-thinking VCs using Harmonic to spot the next unicorn before the rest of the market.
+              Join forward-thinking VCs using FlowStack to spot the next unicorn before the rest of the market.
             </p>
             <Link to="/register">
               <Button size="lg" className="bg-white text-indigo-600 hover:bg-indigo-50 border-none h-12 px-8">
@@ -158,10 +153,10 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-12 px-6 border-t border-neutral-200 dark:border-neutral-800 text-center text-neutral-500 dark:text-neutral-400 text-sm">
         <div className="flex items-center justify-center gap-2 mb-4">
-          <Hexagon className="w-5 h-5 text-neutral-400" />
-          <span className="font-semibold text-neutral-700 dark:text-neutral-300">Harmonic</span>
+          <BrandLogo compact />
+          <span className="font-semibold text-neutral-700 dark:text-neutral-300">FlowStack</span>
         </div>
-        <p>&copy; {new Date().getFullYear()} Harmonic Intelligence Inc. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} FlowStack Intelligence Inc. All rights reserved.</p>
       </footer>
     </div>
   );

@@ -8,7 +8,6 @@ import {
   Settings,
   Search,
   LogOut,
-  Hexagon,
   Menu,
   X
 } from 'lucide-react';
@@ -18,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CommandPalette } from './CommandPalette';
 import { useState } from 'react';
+import { BrandLogo } from './BrandLogo';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -60,11 +60,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       )}>
         <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative w-8 h-8 flex items-center justify-center">
-              <Hexagon className="w-8 h-8 text-indigo-600 dark:text-indigo-500 fill-indigo-100 dark:fill-indigo-900/30 transition-transform group-hover:rotate-90 duration-500" strokeWidth={1.5} />
-              <span className="absolute text-indigo-600 dark:text-indigo-400 font-bold text-xs">H</span>
-            </div>
-            <span className="font-bold text-xl tracking-tight text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Harmonic</span>
+            <BrandLogo className="group-hover:scale-[1.02] transition-transform" />
           </Link>
           <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-neutral-500">
             <X size={20} />
@@ -104,7 +100,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Menu size={24} />
             </button>
             <div className="lg:hidden flex items-center gap-2 mr-2">
-                <Hexagon className="w-6 h-6 text-indigo-600 dark:text-indigo-500 fill-indigo-100 dark:fill-indigo-900/30" strokeWidth={1.5} />
+                <BrandLogo compact />
             </div>
             <div className="flex items-center w-full max-w-xs sm:max-w-md bg-neutral-100 dark:bg-neutral-800 rounded-full px-4 py-2 transition-colors focus-within:ring-2 focus-within:ring-indigo-500/20">
               <Search size={18} className="text-neutral-400 mr-2 flex-shrink-0" />

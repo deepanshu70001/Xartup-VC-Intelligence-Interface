@@ -77,7 +77,7 @@ export default function CompanyProfilePage() {
   const handleShare = async () => {
     const shareData = {
       title: `${company.name} - Company Profile`,
-      text: `Check out ${company.name} on Harmonic VC Discovery`,
+      text: `Check out ${company.name} on FlowStack`,
       url: window.location.href
     };
 
@@ -378,7 +378,7 @@ export default function CompanyProfilePage() {
             />
              <TimelineItem 
                 date={new Date(company.createdAt).toLocaleDateString()}
-                title="Added to ScoutAI"
+                title="Added to FlowStack"
                 description="Company tracked in dashboard."
                 type="system"
             />

@@ -4,6 +4,7 @@ import { MOCK_COMPANIES } from '../data/mock';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
+import { buildApiUrl, parseApiResponse } from '../lib/api';
 
 export interface Thesis {
   sectors: string[];
@@ -282,16 +283,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         url = `https://${url}`;
       }
 
-      const response = await fetch('/api/enrich', {
+      const response = await fetch(buildApiUrl('/api/enrich'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ url }),
       });
 
       if (!response.ok) {
         let errorMessage = 'Enrichment failed';
         try {
-          const errorData = await response.json();
+          const errorData = await parseApiResponse<{ error?: string }>(response);
           errorMessage = errorData.error || errorMessage;
         } catch (e) {
           if (response.status === 401) {
@@ -303,7 +305,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         throw new Error(errorMessage);
       }
 
-      const enrichmentData = await response.json();
+      const enrichmentData = await parseApiResponse<any>(response);
       
       const updatedCompany = {
         ...company,

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { buildApiUrl, parseApiResponse } from '../lib/api';
 
 interface User {
   id: string;
@@ -30,9 +31,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const res = await fetch('/api/auth/me');
+      const res = await fetch(buildApiUrl('/api/auth/me'), {
+        credentials: 'include',
+      });
       if (res.ok) {
-        const data = await res.json();
+        const data = await parseApiResponse<{ user: User }>(res);
         setUser(data.user);
       }
     } catch (error) {
@@ -43,13 +46,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (credentials: any) => {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch(buildApiUrl('/api/auth/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(credentials),
     });
 
-    const data = await res.json();
+    const data = await parseApiResponse<{ user?: User; error?: string }>(res);
 
     if (!res.ok) {
       throw new Error(data.error || 'Login failed');
@@ -60,13 +64,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (credentials: any) => {
-    const res = await fetch('/api/auth/register', {
+    const res = await fetch(buildApiUrl('/api/auth/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(credentials),
     });
 
-    const data = await res.json();
+    const data = await parseApiResponse<{ user?: User; error?: string }>(res);
 
     if (!res.ok) {
       throw new Error(data.error || 'Registration failed');
@@ -77,19 +82,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch(buildApiUrl('/api/auth/logout'), {
+      method: 'POST',
+      credentials: 'include',
+    });
     setUser(null);
     toast.success('Logged out');
   };
 
   const updateProfile = async (data: any) => {
-    const res = await fetch('/api/auth/profile', {
+    const res = await fetch(buildApiUrl('/api/auth/profile'), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(data),
     });
 
-    const responseData = await res.json();
+    const responseData = await parseApiResponse<{ user?: User; error?: string }>(res);
 
     if (!res.ok) {
       throw new Error(responseData.error || 'Update failed');

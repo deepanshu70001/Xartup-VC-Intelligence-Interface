@@ -1,4 +1,4 @@
-# Harmonic VC Discovery
+# FlowStack VC Discovery
 
 AI-assisted deal flow tracking app for thesis-driven investors.
 
