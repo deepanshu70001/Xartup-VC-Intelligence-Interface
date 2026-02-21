@@ -25,6 +25,7 @@ async function startServer() {
     .split(",")
     .map((o) => o.trim())
     .filter(Boolean);
+  const allowVercelOrigins = process.env.CORS_ALLOW_VERCEL === "true";
   const cookieSecure =
     process.env.COOKIE_SECURE === "true" ||
     (process.env.COOKIE_SECURE !== "false" && isProd);
@@ -35,8 +36,11 @@ async function startServer() {
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     const allowAnyOrigin = allowedOrigins.length === 0 && !isProd;
+    const isVercelOrigin =
+      typeof origin === "string" && /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
     const isAllowedOrigin =
-      typeof origin === "string" && (allowAnyOrigin || allowedOrigins.includes(origin));
+      typeof origin === "string" &&
+      (allowAnyOrigin || allowedOrigins.includes(origin) || (allowVercelOrigins && isVercelOrigin));
 
     if (isAllowedOrigin && origin) {
       res.header("Access-Control-Allow-Origin", origin);
