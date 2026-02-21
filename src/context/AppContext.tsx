@@ -24,11 +24,13 @@ interface AppState {
   addList: (name: string) => void;
   deleteList: (id: string) => void;
   addCompanyToList: (listId: string, companyId: string) => void;
+  addCompaniesToList: (listId: string, companyIds: string[]) => void;
   removeCompanyFromList: (listId: string, companyId: string) => void;
   saveSearch: (name: string, filters: any) => void;
   deleteSearch: (id: string) => void;
   updateCompany: (company: Company) => void;
   addCompany: (company: Company) => void;
+  deleteCompanies: (companyIds: string[]) => void;
   enrichCompany: (id: string) => Promise<void>;
   toggleFavorite: (id: string) => void;
   activities: Activity[];
@@ -195,6 +197,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
+  const addCompaniesToList = (listId: string, companyIds: string[]) => {
+    if (companyIds.length === 0) return;
+
+    let addedCount = 0;
+    let listName = 'list';
+
+    setAllLists(prev => prev.map(list => {
+      if (list.id !== listId) return list;
+      listName = list.name;
+      const toAdd = companyIds.filter(id => !list.companyIds.includes(id));
+      if (toAdd.length === 0) return list;
+      addedCount = toAdd.length;
+      return { ...list, companyIds: [...list.companyIds, ...toAdd] };
+    }));
+
+    if (addedCount === 0) {
+      toast.info('All selected companies are already in this list');
+      return;
+    }
+
+    addActivity('Bulk Added to List', `Added ${addedCount} companies to ${listName}`);
+    toast.success(`Added ${addedCount} companies to ${listName}`);
+  };
+
   const removeCompanyFromList = (listId: string, companyId: string) => {
     setAllLists(prev => prev.map(list => {
       if (list.id === listId) {
@@ -239,6 +265,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addCompany = (newCompany: Company) => {
     setCompanies(prev => [newCompany, ...prev]);
     addActivity('Added Company', `Added new company ${newCompany.name}`);
+  };
+
+  const deleteCompanies = (companyIds: string[]) => {
+    if (companyIds.length === 0) return;
+    const idSet = new Set(companyIds);
+    const deletedCount = companies.filter(c => idSet.has(c.id)).length;
+
+    setCompanies(prev => prev.filter(c => !idSet.has(c.id)));
+    setAllLists(prev => prev.map(list => ({
+      ...list,
+      companyIds: list.companyIds.filter(id => !idSet.has(id))
+    })));
+    setUserFavorites(prev => {
+      const next: Record<string, string[]> = {};
+      (Object.entries(prev) as [string, string[]][]).forEach(([userId, favorites]) => {
+        next[userId] = favorites.filter(id => !idSet.has(id));
+      });
+      return next;
+    });
+    setUserNotes(prev => {
+      const next: Record<string, Record<string, string>> = {};
+      (Object.entries(prev) as [string, Record<string, string>][]).forEach(([userId, notes]) => {
+        const filteredEntries = Object.entries(notes).filter(([companyId]) => !idSet.has(companyId));
+        next[userId] = Object.fromEntries(filteredEntries);
+      });
+      return next;
+    });
+
+    addActivity('Deleted Companies', `Deleted ${deletedCount} companies`);
+    toast.success(`${deletedCount} compan${deletedCount === 1 ? 'y' : 'ies'} deleted`);
   };
 
   const toggleFavorite = (id: string) => {
@@ -333,11 +389,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addList,
       deleteList,
       addCompanyToList,
+      addCompaniesToList,
       removeCompanyFromList,
       saveSearch,
       deleteSearch,
       updateCompany,
       addCompany,
+      deleteCompanies,
       enrichCompany,
       toggleFavorite,
       addActivity,

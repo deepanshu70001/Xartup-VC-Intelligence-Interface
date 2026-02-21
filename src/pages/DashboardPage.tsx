@@ -1,34 +1,137 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { 
   Building2, 
   TrendingUp, 
   List as ListIcon, 
-  Clock, 
   ArrowRight,
-  Sparkles,
   DollarSign,
-  Activity,
   Plus,
   Target,
   Zap
 } from 'lucide-react';
 import { Button, Badge } from '../components/ui/Primitives';
-import { getFaviconUrl } from '../lib/utils';
+
+interface LiveFeedItem {
+  id: string;
+  companyId?: string;
+  name: string;
+  action: string;
+  source: string;
+  time: string;
+  score: number;
+  dotColor: string;
+  timestamp: number;
+}
 
 export default function DashboardPage() {
-  const { companies, lists, savedSearches, thesis } = useApp();
-  const { user } = useAuth();
+  const { companies, savedSearches, thesis, activities } = useApp();
+
+  const getDotColor = (industry?: string) => {
+    const palette = ['bg-indigo-500', 'bg-emerald-500', 'bg-blue-500', 'bg-purple-500', 'bg-amber-500'];
+    if (!industry) return palette[0];
+    const idx = Math.abs(
+      industry.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
+    ) % palette.length;
+    return palette[idx];
+  };
+
+  const getScore = (input: string) => {
+    const hash = input.split('').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) % 997, 0);
+    return 70 + (hash % 26); // 70 - 95
+  };
+
+  const toSource = (urlOrLabel?: string) => {
+    if (!urlOrLabel) return 'AI Enrichment';
+    if (urlOrLabel.startsWith('http')) {
+      try {
+        return new URL(urlOrLabel).hostname.replace(/^www\./, '');
+      } catch {
+        return 'AI Enrichment';
+      }
+    }
+    return urlOrLabel;
+  };
+
+  const timeAgo = (dateLike: string | number) => {
+    const time = typeof dateLike === 'number' ? dateLike : new Date(dateLike).getTime();
+    const diffMs = Date.now() - time;
+    const mins = Math.max(1, Math.floor(diffMs / 60000));
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
+
+  const liveFeedItems = useMemo<LiveFeedItem[]>(() => {
+    const enrichmentItems: LiveFeedItem[] = companies.flatMap((company) => {
+      if (!company.enrichment) return [];
+      const ts = new Date(company.enrichment.timestamp).getTime() || Date.now();
+      const signals = company.enrichment.derived_signals?.slice(0, 2) || [];
+      const primarySignals = signals.length > 0 ? signals : [company.enrichment.summary];
+
+      return primarySignals.map((signal, idx) => ({
+        id: `${company.id}-enrichment-${idx}`,
+        companyId: company.id,
+        name: company.name,
+        action: signal,
+        source: toSource(company.enrichment?.source),
+        time: timeAgo(ts - idx * 300000),
+        score: getScore(`${company.name}-${signal}`),
+        dotColor: getDotColor(company.industry),
+        timestamp: ts - idx * 300000,
+      }));
+    });
+
+    const activityItems: LiveFeedItem[] = activities
+      .filter((a) => a.action === 'Enriched Company')
+      .slice(0, 8)
+      .map((a, idx) => {
+        const company = companies.find((c) => a.details.includes(c.name));
+        const ts = new Date(a.timestamp).getTime() || Date.now();
+        return {
+          id: `activity-${a.id}`,
+          companyId: company?.id,
+          name: company?.name || 'Portfolio Company',
+          action: a.details,
+          source: 'FlowStack Activity',
+          time: timeAgo(ts),
+          score: getScore(`${a.action}-${idx}`),
+          dotColor: getDotColor(company?.industry),
+          timestamp: ts,
+        };
+      });
+
+    const merged = [...enrichmentItems, ...activityItems]
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 8);
+
+    if (merged.length > 0) return merged;
+
+    // Fallback: generate feed from tracked companies so dashboard is never empty.
+    return companies.slice(0, 6).map((company, idx) => {
+      const ts = Date.now() - idx * 4 * 60 * 60 * 1000;
+      return {
+        id: `fallback-${company.id}`,
+        companyId: company.id,
+        name: company.name,
+        action: `Added ${company.name} to ${company.industry} watchlist`,
+        source: 'FlowStack',
+        time: timeAgo(ts),
+        score: getScore(`${company.name}-${company.industry}`),
+        dotColor: getDotColor(company.industry),
+        timestamp: ts,
+      };
+    });
+  }, [activities, companies]);
 
   // Calculate some stats
   const totalCompanies = companies.length;
-  const enrichedCompanies = companies.filter(c => c.enrichment).length;
-  const newSignals = 24; // Mock data for "New Signals"
-  
-  // Get recent companies
-  const recentCompanies = companies.slice(0, 5);
+  const newSignals = liveFeedItems.filter(
+    (item) => Date.now() - item.timestamp < 7 * 24 * 60 * 60 * 1000
+  ).length;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
@@ -103,39 +206,19 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-0">
-            {/* Mock Signals for the demo look */}
-            <SignalItem 
-                name="NeuralPath" 
-                action="Raised $12M Series A" 
-                source="TechCrunch"
-                time="2h ago" 
-                dotColor="bg-indigo-500"
-                score={92}
-            />
-            <SignalItem 
-                name="EcoSynth" 
-                action="Hired VP of Engineering from Google" 
-                source="LinkedIn"
-                time="5h ago" 
-                dotColor="bg-emerald-500"
-                score={88}
-            />
-            <SignalItem 
-                name="MediFlow" 
-                action="Released v2.0 with Agentic Workflow" 
-                source="Product Hunt"
-                time="1d ago" 
-                dotColor="bg-blue-500"
-                score={85}
-            />
-            <SignalItem 
-                name="QuantumLeap" 
-                action="Mentioned in 'Top AI Startups 2026'" 
-                source="Substack"
-                time="2d ago" 
-                dotColor="bg-purple-500"
-                score={79}
-            />
+            {liveFeedItems.map((item) => (
+              <React.Fragment key={item.id}>
+                <SignalItem
+                  name={item.name}
+                  action={item.action}
+                  source={item.source}
+                  time={item.time}
+                  dotColor={item.dotColor}
+                  score={item.score}
+                  companyId={item.companyId}
+                />
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
@@ -160,7 +243,11 @@ export default function DashboardPage() {
             <div className="space-y-3">
                 {savedSearches.length > 0 ? (
                 savedSearches.slice(0, 3).map(search => (
-                    <div key={search.id} className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer group">
+                    <Link
+                      key={search.id}
+                      to={`/companies?savedSearchId=${search.id}`}
+                      className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer group"
+                    >
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                                 <ListIcon size={14} />
@@ -168,7 +255,7 @@ export default function DashboardPage() {
                             <span className="font-medium text-sm text-neutral-900 dark:text-white truncate max-w-[120px]">{search.name}</span>
                         </div>
                         <ArrowRight size={14} className="text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
+                    </Link>
                 ))
                 ) : (
                 <div className="text-center py-4">
@@ -206,27 +293,32 @@ function StatCard({ label, value, icon, trend, trendUp, customBadge, description
   );
 }
 
-const SignalItem = ({ name, action, time, dotColor, source, score }: { name: string, action: string, time: string, dotColor: string, source: string, score: number }) => {
+const SignalItem = ({ name, action, time, dotColor, source, score, companyId }: { name: string, action: string, time: string, dotColor: string, source: string, score: number, companyId?: string }) => {
+    const Wrapper = ({ children }: { children: React.ReactNode }) =>
+      companyId ? <Link to={`/companies/${companyId}`}>{children}</Link> : <>{children}</>;
+
     return (
-        <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 px-4 -mx-4 transition-colors cursor-pointer group rounded-lg">
-            <div className="flex items-center gap-4">
-                <div className={`w-2 h-2 rounded-full ${dotColor} flex-shrink-0`}></div>
-                <div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-neutral-900 dark:text-white font-bold text-base">{name}</span>
-                        <Badge variant="neutral" className="text-[10px] py-0 h-5">{source}</Badge>
-                    </div>
-                    <div className="text-neutral-600 dark:text-neutral-400 text-sm mt-0.5">{action}</div>
+        <Wrapper>
+          <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 px-4 -mx-4 transition-colors cursor-pointer group rounded-lg">
+              <div className="flex items-center gap-4">
+                  <div className={`w-2 h-2 rounded-full ${dotColor} flex-shrink-0`}></div>
+                  <div>
+                      <div className="flex items-center gap-2">
+                          <span className="text-neutral-900 dark:text-white font-bold text-base">{name}</span>
+                          <Badge variant="neutral" className="text-[10px] py-0 h-5">{source}</Badge>
+                      </div>
+                      <div className="text-neutral-600 dark:text-neutral-400 text-sm mt-0.5">{action}</div>
+                  </div>
+              </div>
+              <div className="flex items-center gap-4">
+                  <div className="text-right hidden sm:block">
+                      <div className="text-xs text-neutral-400 font-medium uppercase tracking-wider">Score</div>
+                      <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{score}</div>
+                  </div>
+                  <div className="text-xs text-neutral-400 w-16 text-right">{time}</div>
                 </div>
-            </div>
-            <div className="flex items-center gap-4">
-                 <div className="text-right hidden sm:block">
-                    <div className="text-xs text-neutral-400 font-medium uppercase tracking-wider">Score</div>
-                    <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{score}</div>
-                </div>
-                <div className="text-xs text-neutral-400 w-16 text-right">{time}</div>
-            </div>
-        </div>
+          </div>
+        </Wrapper>
     )
 }
 

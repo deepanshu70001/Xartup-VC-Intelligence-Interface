@@ -8,9 +8,10 @@ import { AddCompanyModal } from '../components/AddCompanyModal';
 import { FilterModal } from '../components/FilterModal';
 import Papa from 'papaparse';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 export default function CompaniesPage() {
-  const { companies, toggleFavorite, enrichingIds, enrichCompany, saveSearch, savedSearches } = useApp();
+  const { companies, toggleFavorite, enrichingIds, enrichCompany, saveSearch, savedSearches, lists, addCompaniesToList, deleteCompanies } = useApp();
   const [searchParams] = useSearchParams();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -151,6 +152,38 @@ export default function CompaniesPage() {
     }
   };
 
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    const confirmed = window.confirm(`Delete ${selectedIds.size} selected companies? This cannot be undone.`);
+    if (!confirmed) return;
+    deleteCompanies(Array.from(selectedIds));
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkAddToList = () => {
+    if (selectedIds.size === 0) return;
+    if (lists.length === 0) {
+      toast.info('Create a list first to use bulk add.');
+      return;
+    }
+
+    const listNames = lists.map(l => l.name).join(', ');
+    const chosen = window.prompt(`Enter list name:\n${listNames}`);
+    if (!chosen || !chosen.trim()) return;
+
+    const selectedList = lists.find(
+      l => l.name.toLowerCase() === chosen.trim().toLowerCase()
+    );
+
+    if (!selectedList) {
+      toast.error('List not found. Please enter an exact list name.');
+      return;
+    }
+
+    addCompaniesToList(selectedList.id, Array.from(selectedIds));
+    setSelectedIds(new Set());
+  };
+
   const activeFilterCount = (advancedFilters.stages?.length || 0) + (advancedFilters.enrichedOnly ? 1 : 0) + (advancedFilters.employeeRanges?.length || 0) + (advancedFilters.industry && advancedFilters.industry !== 'All' ? 1 : 0);
 
   return (
@@ -160,7 +193,7 @@ export default function CompaniesPage() {
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Companies</h1>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1">Manage and track your deal flow pipeline.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           {selectedIds.size > 0 && (
             <Button variant="secondary" onClick={() => setSelectedIds(new Set())}>
               Clear Selection ({selectedIds.size})
@@ -253,13 +286,13 @@ export default function CompaniesPage() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-neutral-900 text-white px-6 py-3 rounded-full shadow-xl z-40 flex items-center gap-4"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-neutral-900 text-white px-4 sm:px-6 py-3 rounded-2xl shadow-xl z-40 flex flex-wrap items-center justify-center gap-3 max-w-[92vw]"
         >
           <span className="text-sm font-medium">{selectedIds.size} selected</span>
           <div className="h-4 w-px bg-neutral-700"></div>
           <button className="text-sm hover:text-indigo-400 transition-colors" onClick={handleExportCSV}>Export</button>
-          <button className="text-sm hover:text-red-400 transition-colors">Delete</button>
-          <button className="text-sm hover:text-emerald-400 transition-colors">Add to List</button>
+          <button className="text-sm hover:text-red-400 transition-colors" onClick={handleBulkDelete}>Delete</button>
+          <button className="text-sm hover:text-emerald-400 transition-colors" onClick={handleBulkAddToList}>Add to List</button>
         </motion.div>
       )}
 
@@ -284,10 +317,10 @@ export default function CompaniesPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ delay: index * 0.05 }}
-              className={`bg-white dark:bg-neutral-900 border ${selectedIds.has(company.id) ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-neutral-200 dark:border-neutral-800'} rounded-xl p-4 hover:shadow-md transition-all group relative`}
+              className={`bg-white dark:bg-neutral-900 border ${selectedIds.has(company.id) ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-neutral-200 dark:border-neutral-800'} rounded-xl p-3 sm:p-4 hover:shadow-md transition-all group relative overflow-hidden`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">
                   <div className="flex items-center justify-center w-8 h-8 cursor-pointer" onClick={() => toggleSelection(company.id)}>
                     {selectedIds.has(company.id) ? (
                         <CheckSquare size={20} className="text-indigo-600" />
@@ -296,7 +329,7 @@ export default function CompaniesPage() {
                     )}
                   </div>
 
-                  <div className="w-12 h-12 rounded-lg border border-neutral-100 dark:border-neutral-800 bg-white p-1 flex items-center justify-center shadow-sm relative">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border border-neutral-100 dark:border-neutral-800 bg-white p-1 flex items-center justify-center shadow-sm relative shrink-0">
                     <img 
                       src={company.logo_url || getFaviconUrl(company.domain)} 
                       alt={company.name} 
@@ -309,9 +342,9 @@ export default function CompaniesPage() {
                       </div>
                     )}
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <Link to={`/companies/${company.id}`} className="font-semibold text-neutral-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 text-lg">
+                      <Link to={`/companies/${company.id}`} className="font-semibold text-neutral-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 text-base sm:text-lg truncate">
                         {company.name}
                       </Link>
                       {company.enrichment ? (
@@ -333,19 +366,19 @@ export default function CompaniesPage() {
                         </button>
                       )}
                     </div>
-                    <div className="text-sm text-neutral-500 dark:text-neutral-400 flex items-center gap-2 mt-0.5">
+                    <div className="text-sm text-neutral-500 dark:text-neutral-400 flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
                       <span>{company.industry}</span>
                       <span className="w-1 h-1 rounded-full bg-neutral-300 dark:bg-neutral-600" />
                       <span>{company.stage}</span>
                       <span className="w-1 h-1 rounded-full bg-neutral-300 dark:bg-neutral-600" />
-                      <a href={`https://${company.domain}`} target="_blank" rel="noreferrer" className="hover:underline hover:text-indigo-500">
+                      <a href={`https://${company.domain}`} target="_blank" rel="noreferrer" className="hover:underline hover:text-indigo-500 break-all">
                         {company.domain}
                       </a>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between lg:justify-end w-full lg:w-auto gap-3">
                   <div className="hidden md:flex flex-col items-end mr-4">
                     <span className="text-xs text-neutral-400">Added</span>
                     <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
@@ -367,7 +400,9 @@ export default function CompaniesPage() {
 
                   <Link to={`/companies/${company.id}`}>
                     <Button variant="ghost" size="sm" className="text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400">
-                      View Details <ArrowRight size={16} className="ml-1" />
+                      <span className="sm:hidden">View</span>
+                      <span className="hidden sm:inline">View Details</span>
+                      <ArrowRight size={16} className="ml-1" />
                     </Button>
                   </Link>
                 </div>

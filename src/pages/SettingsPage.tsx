@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { useTheme } from '../context/ThemeContext';
 import { Button } from '../components/ui/Primitives';
-import { Moon, Sun, Monitor, User, Bell, Shield, Key, LogOut, Target, Plus, X, Trash2 } from 'lucide-react';
+import { Monitor, Bell, Shield, Key, Target, Plus, X, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { toast } from 'sonner';
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
   const { thesis, updateThesis, clearActivities } = useApp();
   
   // Local state for editing thesis to avoid constant context updates
   const [localThesis, setLocalThesis] = useState(thesis);
   const [newKeyword, setNewKeyword] = useState('');
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [signalAlerts, setSignalAlerts] = useState(true);
 
   const handleSaveThesis = () => {
     updateThesis(localThesis);
@@ -49,7 +51,7 @@ export default function SettingsPage() {
 
       {/* Investment Thesis Configuration */}
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
+        <div className="p-6 border-b border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h2 className="text-lg font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
                 <Target size={20} className="text-indigo-600 dark:text-indigo-400" /> Investment Thesis
@@ -93,9 +95,14 @@ export default function SettingsPage() {
                 <div className="flex gap-2 max-w-md">
                     <input 
                         type="text" 
-                        value={newKeyword}
-                        onChange={(e) => setNewKeyword(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && addKeyword()}
+                  value={newKeyword}
+                  onChange={(e) => setNewKeyword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addKeyword();
+                    }
+                  }}
                         placeholder="Add a keyword (e.g. 'Generative')"
                         className="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
                     />
@@ -113,40 +120,14 @@ export default function SettingsPage() {
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Customize how the app looks on your device.</p>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-3 gap-4 max-w-md">
-            <button
-              onClick={() => setTheme('light')}
-              className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                theme === 'light' 
-                  ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' 
-                  : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-              }`}
-            >
-              <Sun size={24} className={theme === 'light' ? 'text-indigo-600' : 'text-neutral-500'} />
-              <span className={`text-sm font-medium ${theme === 'light' ? 'text-indigo-900 dark:text-indigo-300' : 'text-neutral-700 dark:text-neutral-300'}`}>Light</span>
-            </button>
-            <button
-              onClick={() => setTheme('dark')}
-              className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                theme === 'dark' 
-                  ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' 
-                  : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-              }`}
-            >
-              <Moon size={24} className={theme === 'dark' ? 'text-indigo-600' : 'text-neutral-500'} />
-              <span className={`text-sm font-medium ${theme === 'dark' ? 'text-indigo-900 dark:text-indigo-300' : 'text-neutral-700 dark:text-neutral-300'}`}>Dark</span>
-            </button>
-            <button
-              onClick={() => setTheme('system')}
-              className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                theme === 'system' 
-                  ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' 
-                  : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
-              }`}
-            >
-              <Monitor size={24} className={theme === 'system' ? 'text-indigo-600' : 'text-neutral-500'} />
-              <span className={`text-sm font-medium ${theme === 'system' ? 'text-indigo-900 dark:text-indigo-300' : 'text-neutral-700 dark:text-neutral-300'}`}>System</span>
-            </button>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <div className="font-medium text-neutral-900 dark:text-white">Theme</div>
+              <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                Switch between light, system, and dark modes.
+              </div>
+            </div>
+            <ThemeToggle />
           </div>
         </div>
       </div>
@@ -164,18 +145,34 @@ export default function SettingsPage() {
               <div className="font-medium text-neutral-900 dark:text-white">Email Notifications</div>
               <div className="text-sm text-neutral-500 dark:text-neutral-400">Receive daily summaries of your tracked companies.</div>
             </div>
-            <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-indigo-600">
-              <span className="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition" />
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !emailNotifications;
+                setEmailNotifications(next);
+                toast.success(`Email notifications ${next ? 'enabled' : 'disabled'}`);
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${emailNotifications ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${emailNotifications ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
           <div className="flex items-center justify-between">
             <div>
               <div className="font-medium text-neutral-900 dark:text-white">Signal Alerts</div>
               <div className="text-sm text-neutral-500 dark:text-neutral-400">Get notified immediately when high-priority signals are detected.</div>
             </div>
-            <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-indigo-600">
-              <span className="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition" />
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !signalAlerts;
+                setSignalAlerts(next);
+                toast.success(`Signal alerts ${next ? 'enabled' : 'disabled'}`);
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${signalAlerts ? 'bg-indigo-600' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${signalAlerts ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
           </div>
         </div>
       </div>
@@ -218,7 +215,14 @@ export default function SettingsPage() {
                   disabled
                   className="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-500"
                 />
-                <Button variant="secondary">Update</Button>
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    toast.info('Update GROQ_API_KEY in backend environment variables and redeploy.')
+                  }
+                >
+                  Update
+                </Button>
               </div>
               <p className="text-xs text-neutral-500 mt-1">Key is securely stored in environment variables.</p>
             </div>

@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { BrandLogo } from '../components/BrandLogo';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
+import { SiteFooter } from '../components/SiteFooter';
 
 export default function LandingPage() {
   const { user, isLoading } = useAuth();
@@ -176,14 +177,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-6 border-t border-neutral-200 dark:border-neutral-800 text-center text-neutral-500 dark:text-neutral-400 text-sm">
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <BrandLogo compact />
-          <span className="font-semibold text-neutral-700 dark:text-neutral-300">FlowStack</span>
-        </div>
-        <p>&copy; {new Date().getFullYear()} FlowStack Intelligence Inc. All rights reserved.</p>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

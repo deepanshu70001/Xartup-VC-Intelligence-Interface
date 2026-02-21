@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CommandPalette } from './CommandPalette';
 import { useState } from 'react';
 import { BrandLogo } from './BrandLogo';
+import { SiteFooter } from './SiteFooter';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
@@ -137,6 +138,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           >
             {children}
           </motion.div>
+          <SiteFooter />
         </div>
       </main>
     </div>
