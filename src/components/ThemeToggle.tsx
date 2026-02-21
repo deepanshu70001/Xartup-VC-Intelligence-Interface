@@ -29,7 +29,7 @@ export function ThemeToggle() {
       <button
         onClick={() => setTheme('system')}
         className={cn(
-          "p-1.5 rounded-full transition-all relative",
+          "hidden sm:inline-flex p-1.5 rounded-full transition-all relative",
           theme === 'system' ? "text-indigo-600 bg-white shadow-sm" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
         )}
         title="System Theme"

@@ -135,6 +135,11 @@ export default function CompanyProfilePage() {
   // Mock data for the design
   const proprietaryScore = 88;
   const momentum = 'High';
+  const addedToFlowStackDate = (() => {
+    if (!company.createdAt) return 'Unknown date';
+    const parsed = new Date(company.createdAt);
+    return Number.isNaN(parsed.getTime()) ? 'Unknown date' : parsed.toLocaleDateString();
+  })();
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12">
@@ -467,7 +472,7 @@ export default function CompanyProfilePage() {
                 type="funding"
             />
              <TimelineItem 
-                date={new Date(company.createdAt).toLocaleDateString()}
+                date={addedToFlowStackDate}
                 title="Added to FlowStack"
                 description="Company tracked in dashboard."
                 type="system"
@@ -502,10 +507,10 @@ function TimelineItem({ date, title, description, type }: { date: string, title:
             <div className={`absolute -left-[25px] top-0 w-8 h-8 rounded-full border-4 border-white dark:border-neutral-900 flex items-center justify-center ${getBg()}`}>
                 {getIcon()}
             </div>
-            <div>
+            <div className="pl-2">
                 <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">{title}</h3>
-                    <span className="text-xs text-neutral-400">â€¢ {date}</span>
+                    <span className="text-xs text-neutral-400">• {date}</span>
                 </div>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400">{description}</p>
             </div>
