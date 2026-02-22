@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { getServerEnv } from "./config/env";
 import { createCorsMiddleware } from "./middleware/cors";
 import { createAuthMiddleware } from "./middleware/auth";
+import { initializeMongo } from "./db/mongo";
 import { registerHealthRoutes } from "./routes/healthRoutes";
 import { registerAuthRoutes } from "./routes/authRoutes";
 import { registerAiRoutes } from "./routes/aiRoutes";
@@ -15,6 +16,8 @@ const __dirname = path.dirname(__filename);
 
 export async function createApp() {
   const env = getServerEnv();
+  await initializeMongo();
+
   const app = express();
   const authenticateToken = createAuthMiddleware(env.jwtSecret);
   const frontendViteConfig = path.resolve(__dirname, "../../../frontend/vite.config.ts");

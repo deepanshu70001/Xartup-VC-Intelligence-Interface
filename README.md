@@ -5,7 +5,7 @@ AI-assisted deal flow tracking app for thesis-driven investors.
 ## Project Structure
 
 - `frontend/`: React app (`src`, `public`, `index.html`, `vite.config.ts`)
-- `backend/`: Express app (`server.ts`, `db.ts`, `src/server/*`, `database.sqlite`)
+- `backend/`: Express app (`server.ts`, `src/server/*`)
 - `dist/`: Production frontend bundle consumed by backend in production mode
 
 ## Tech Stack
@@ -23,6 +23,8 @@ Create a `.env` file in the project root.
 |---|---|---|---|
 | `GROQ_API_KEY` | Yes (for enrichment) | `POST /api/enrich` | Required for AI enrichment calls. |
 | `JWT_SECRET` | Yes (recommended) | Auth token sign/verify | If missing, server falls back to an insecure default. Set a strong value in all environments. |
+| `MONGODB_URI` | Yes | Backend DB connection | MongoDB connection string used for users/auth data. |
+| `MONGODB_DB_NAME` | No | Backend DB selection | Defaults to `harmonicvc` if omitted. |
 | `APP_URL` | No | Not currently used in runtime code | Kept from template; safe to omit for local dev. |
 | `NODE_ENV` | No | Server mode switch | `production` enables static serving from `dist`. |
 | `VITE_API_URL` | Frontend deploys | Frontend API base | Set on Vercel to backend domain (Render/Railway/etc.). |
@@ -36,6 +38,8 @@ Example:
 ```env
 GROQ_API_KEY=your_groq_api_key
 JWT_SECRET=replace_with_a_long_random_secret
+MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/harmonicvc?retryWrites=true&w=majority
+MONGODB_DB_NAME=harmonicvc
 APP_URL=http://localhost:3000
 VITE_API_URL=
 CORS_ORIGIN=
@@ -212,8 +216,8 @@ These are reference points only; FlowStack should keep its own thesis-first work
 
 ## Data Storage
 
-- SQLite (`backend/database.sqlite`):
-  - `users` table (id, name, email, password, company, location, created_at)
+- MongoDB:
+  - `users` collection (id, name, email, password, company, location, createdAt)
 - LocalStorage:
   - companies, lists, saved searches, activities
   - user favorites, user notes, thesis

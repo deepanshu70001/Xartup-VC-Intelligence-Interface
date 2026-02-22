@@ -2,15 +2,14 @@ import type { Express } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
-import db from "../../../db.ts";
+import { MongoServerError } from "mongodb";
 import type { AuthenticatedRequest } from "../middleware/auth";
-
-interface UserRecord {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-}
+import {
+  createUser,
+  findPublicUserById,
+  findUserByEmail,
+  updateUserProfile,
+} from "../repositories/userRepository";
 
 export function registerAuthRoutes({
   app,
@@ -37,12 +36,16 @@ export function registerAuthRoutes({
       const id = uuidv4();
 
       try {
-        const statement = db.prepare(
-          "INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)"
-        );
-        statement.run(id, name, email, hashedPassword);
+        await createUser({
+          id,
+          name,
+          email,
+          password: hashedPassword,
+          company: null,
+          location: null,
+        });
       } catch (error: any) {
-        if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+        if (error instanceof MongoServerError && error.code === 11000) {
           return res.status(400).json({ error: "Email already exists" });
         }
         throw error;
@@ -66,8 +69,7 @@ export function registerAuthRoutes({
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
-      const statement = db.prepare("SELECT * FROM users WHERE email = ?");
-      const user = statement.get(email) as UserRecord | undefined;
+      const user = await findUserByEmail(email);
 
       if (!user) {
         return res.status(400).json({ error: "Invalid credentials" });
@@ -109,15 +111,13 @@ export function registerAuthRoutes({
     res.json({ message: "Logged out" });
   });
 
-  app.get("/api/auth/me", authenticateToken, (req, res) => {
-    const statement = db.prepare(
-      "SELECT id, name, email, company, location FROM users WHERE id = ?"
-    );
-    const user = statement.get((req as AuthenticatedRequest).user.id);
+  app.get("/api/auth/me", authenticateToken, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).user.id;
+    const user = await findPublicUserById(userId);
     res.json({ user });
   });
 
-  app.put("/api/auth/profile", authenticateToken, (req, res) => {
+  app.put("/api/auth/profile", authenticateToken, async (req, res) => {
     try {
       const { name, email, company, location } = req.body;
       const userId = (req as AuthenticatedRequest).user.id;
@@ -126,17 +126,18 @@ export function registerAuthRoutes({
         return res.status(400).json({ error: "Name and email are required" });
       }
 
-      const updateStatement = db.prepare(
-        "UPDATE users SET name = ?, email = ?, company = ?, location = ? WHERE id = ?"
-      );
-      updateStatement.run(name, email, company || null, location || null, userId);
-
-      const userStatement = db.prepare(
-        "SELECT id, name, email, company, location FROM users WHERE id = ?"
-      );
-      const user = userStatement.get(userId);
+      const user = await updateUserProfile({
+        id: userId,
+        name,
+        email,
+        company: company || null,
+        location: location || null,
+      });
       res.json({ user });
-    } catch (error) {
+    } catch (error: any) {
+      if (error instanceof MongoServerError && error.code === 11000) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
       console.error("Profile update error:", error);
       res.status(500).json({ error: "Failed to update profile" });
     }
