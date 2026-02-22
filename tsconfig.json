@@ -13,12 +13,13 @@
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
     "allowJs": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./*"
+        "frontend/*"
       ]
     },
     "allowImportingTsExtensions": true,

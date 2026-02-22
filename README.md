@@ -2,6 +2,12 @@
 
 AI-assisted deal flow tracking app for thesis-driven investors.
 
+## Project Structure
+
+- `frontend/`: React app (`src`, `public`, `index.html`, `vite.config.ts`)
+- `backend/`: Express app (`server.ts`, `db.ts`, `src/server/*`, `database.sqlite`)
+- `dist/`: Production frontend bundle consumed by backend in production mode
+
 ## Tech Stack
 
 - Frontend: React 19, TypeScript, Vite, Tailwind CSS v4, Framer Motion
@@ -206,7 +212,7 @@ These are reference points only; FlowStack should keep its own thesis-first work
 
 ## Data Storage
 
-- SQLite (`database.sqlite`):
+- SQLite (`backend/database.sqlite`):
   - `users` table (id, name, email, password, company, location, created_at)
 - LocalStorage:
   - companies, lists, saved searches, activities
@@ -215,8 +221,8 @@ These are reference points only; FlowStack should keep its own thesis-first work
 ## Notes
 
 - Landing page hero preview switches by theme:
-  - Light: `public/landing-dashboard-light.png`
-  - Dark: `public/landing-dashboard-dark.png`
+  - Light: `frontend/public/landing-dashboard-light.png`
+  - Dark: `frontend/public/landing-dashboard-dark.png`
 - For split frontend/backend deploys (Vercel + Render), set:
   - `VITE_API_URL` on frontend
   - `CORS_ORIGIN` / `CORS_ALLOW_VERCEL` and cookie vars on backend.
