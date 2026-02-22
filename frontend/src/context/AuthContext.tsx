@@ -30,6 +30,7 @@ interface AuthContextType {
   register: (data: unknown) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: unknown) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -153,6 +154,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }, [request]);
 
+  const deleteAccount = useCallback(async () => {
+    await request<{ success: boolean }>(
+      '/api/auth/account',
+      {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      }
+    );
+
+    clearStoredAuthToken();
+    try {
+      localStorage.removeItem('companies');
+      localStorage.removeItem('lists');
+      localStorage.removeItem('savedSearches');
+      localStorage.removeItem('activities');
+      localStorage.removeItem('userFavorites');
+      localStorage.removeItem('userNotes');
+      localStorage.removeItem('thesis');
+    } catch {
+      // ignore storage failures
+    }
+    setUser(null);
+    toast.success('Account deleted');
+  }, [request]);
+
   const value = useMemo(
     () => ({
       user,
@@ -161,8 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       logout,
       updateProfile,
+      deleteAccount,
     }),
-    [user, isLoading, login, register, logout, updateProfile]
+    [user, isLoading, login, register, logout, updateProfile, deleteAccount]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -18,17 +18,9 @@ import {
 import { toast } from 'sonner';
 import { Button, Badge } from '../components/ui/Primitives';
 import { useApp } from '../context/AppContext';
-import { buildApiUrl, getAuthHeaders, parseApiResponse } from '../lib/api';
 import { getFaviconUrl } from '../lib/utils';
-
-interface LiveNewsItem {
-  id: string;
-  company: string;
-  title: string;
-  source: string;
-  url: string;
-  publishedAt: string;
-}
+import { fetchLiveFeedForCompanies, type LiveNewsItem } from '../lib/liveFeed';
+import { getEvaluationScore } from '../lib/evaluation';
 
 interface TimelineEvent {
   id: string;
@@ -42,7 +34,7 @@ interface TimelineEvent {
 export default function CompanyProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { companies, enrichCompany, lists, addCompanyToList, updateCompanyNote, toggleFavorite } = useApp();
+  const { companies, thesis, enrichCompany, lists, addCompanyToList, updateCompanyNote, toggleFavorite } = useApp();
 
   const [isEnriching, setIsEnriching] = useState(false);
   const [showListMenu, setShowListMenu] = useState(false);
@@ -66,20 +58,8 @@ export default function CompanyProfilePage() {
     setIsLiveLoading(true);
     setLiveError(null);
     try {
-      const params = new URLSearchParams({
-        companies: company.name,
-        limit: '8',
-        perCompany: '4',
-      });
-      const response = await fetch(buildApiUrl(`/api/live-feed?${params.toString()}`), {
-        headers: getAuthHeaders(),
-        credentials: 'include',
-      });
-      const data = await parseApiResponse<{ error?: string; items?: LiveNewsItem[] }>(response);
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to load live feed');
-      }
-      setLiveItems(Array.isArray(data.items) ? data.items : []);
+      const items = await fetchLiveFeedForCompanies([company.name], { perCompany: 3, limit: 8 });
+      setLiveItems(items.filter((item) => item.company.toLowerCase() === company.name.toLowerCase()));
     } catch (error: any) {
       setLiveError(error.message || 'Failed to load live feed');
     } finally {
@@ -178,13 +158,9 @@ export default function CompanyProfilePage() {
     toast.success('Company brief exported');
   };
 
-  const proprietaryScore = useMemo(() => {
-    const sourceScore = Math.min((company.enrichment?.sources?.length || 0) * 6, 24);
-    const keywordScore = Math.min((company.enrichment?.keywords?.length || 0) * 2, 16);
-    const signalScore = Math.min((company.enrichment?.derived_signals?.length || 0) * 7, 28);
-    const feedScore = Math.min(liveItems.length * 3, 18);
-    return Math.min(96, 30 + sourceScore + keywordScore + signalScore + feedScore);
-  }, [company.enrichment, liveItems.length]);
+  const evaluationScore = useMemo(() => {
+    return getEvaluationScore(company, thesis, liveItems);
+  }, [company, liveItems, thesis]);
 
   const momentum = useMemo(() => {
     const now = Date.now();
@@ -381,8 +357,8 @@ export default function CompanyProfilePage() {
           </div>
 
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 min-w-[260px]">
-            <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-4">Live Signal Score</h3>
-            <div className="text-4xl font-bold text-neutral-900 dark:text-white">{proprietaryScore}</div>
+            <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-4">Evaluation Score</h3>
+            <div className="text-4xl font-bold text-neutral-900 dark:text-white">{evaluationScore}/100</div>
             <div className="mt-3 text-sm text-neutral-500">Momentum: <span className="font-semibold text-emerald-600">{momentum}</span></div>
             <div className="mt-4 space-y-2 text-xs text-neutral-500">
               <div>Sources: {company.enrichment?.sources?.length || 0}</div>

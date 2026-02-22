@@ -9,6 +9,8 @@ import { FilterModal } from '../components/FilterModal';
 import Papa from 'papaparse';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { getEvaluationBadgeVariant, getEvaluationScore } from '../lib/evaluation';
+import { fetchLiveFeedForCompanies, type LiveNewsItem } from '../lib/liveFeed';
 
 type SortField = 'name' | 'industry' | 'stage' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
@@ -36,46 +38,50 @@ export default function CompaniesPage() {
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [currentPage, setCurrentPage] = useState(1);
+  const [liveItemsByCompany, setLiveItemsByCompany] = useState<Record<string, LiveNewsItem[]>>({});
   const pageSize = 10;
 
-  const getEvaluationScore = (company: any) => {
-    let score = 25;
-    const industry = String(company.industry || '').toLowerCase();
-    const stage = String(company.stage || '').toLowerCase();
-    const textBlob = [
-      company.description || '',
-      ...(Array.isArray(company.tags) ? company.tags : []),
-      ...(company.enrichment?.keywords || []),
-      ...(company.enrichment?.derived_signals || []),
-    ]
-      .join(' ')
-      .toLowerCase();
+  const getCompanyKey = (name: string) => String(name || '').trim().toLowerCase();
 
-    const sectorMatches = (thesis?.sectors || []).filter((sector) =>
-      industry.includes(String(sector).toLowerCase())
-    ).length;
-    score += Math.min(sectorMatches * 18, 36);
+  useEffect(() => {
+    let cancelled = false;
 
-    const stageMatches = (thesis?.stages || []).filter((targetStage) =>
-      stage.includes(String(targetStage).toLowerCase())
-    ).length;
-    score += Math.min(stageMatches * 16, 24);
+    const loadLiveFeed = async () => {
+      try {
+        const items = await fetchLiveFeedForCompanies(companies.map((company) => company.name), {
+          perCompany: 3,
+          limit: 20,
+        });
+        if (cancelled) return;
 
-    const keywordMatches = (thesis?.keywords || []).filter((keyword) =>
-      textBlob.includes(String(keyword).toLowerCase())
-    ).length;
-    score += Math.min(keywordMatches * 7, 21);
+        const grouped: Record<string, LiveNewsItem[]> = {};
+        items.forEach((item) => {
+          const key = getCompanyKey(item.company);
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(item);
+        });
+        setLiveItemsByCompany(grouped);
+      } catch {
+        if (!cancelled) setLiveItemsByCompany({});
+      }
+    };
 
-    if (company.enrichment) score += 12;
+    loadLiveFeed();
+    const intervalId = window.setInterval(loadLiveFeed, 5 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [companies]);
 
-    return Math.max(0, Math.min(100, score));
-  };
-
-  const getEvaluationBadgeVariant = (score: number): 'success' | 'warning' | 'neutral' => {
-    if (score >= 75) return 'success';
-    if (score >= 55) return 'warning';
-    return 'neutral';
-  };
+  const evaluationScoreByCompanyId = useMemo(() => {
+    return Object.fromEntries(
+      companies.map((company) => {
+        const newsItems = liveItemsByCompany[getCompanyKey(company.name)] || [];
+        return [company.id, getEvaluationScore(company, thesis, newsItems)];
+      })
+    );
+  }, [companies, liveItemsByCompany, thesis]);
 
   useEffect(() => {
     const query = searchParams.get('search');
@@ -186,7 +192,7 @@ export default function CompaniesPage() {
         Domain: c.domain,
         Industry: c.industry,
         Stage: c.stage,
-        Evaluation: getEvaluationScore(c),
+        Evaluation: evaluationScoreByCompanyId[c.id] ?? getEvaluationScore(c, thesis, []),
         Tags: Array.isArray(c.tags) ? c.tags.join(', ') : '',
         Description: c.description,
         Enriched: c.enrichment ? 'Yes' : 'No',
@@ -345,7 +351,7 @@ export default function CompaniesPage() {
           </thead>
           <tbody>
             {paginatedCompanies.map((company: any) => {
-              const evalScore = getEvaluationScore(company);
+              const evalScore = evaluationScoreByCompanyId[company.id] ?? getEvaluationScore(company, thesis, []);
               const tags = Array.isArray(company.tags) ? company.tags : [];
 
               return <tr key={company.id} className="border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/40">

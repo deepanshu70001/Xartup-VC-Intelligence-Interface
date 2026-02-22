@@ -6,6 +6,7 @@ import { MongoServerError } from "mongodb";
 import type { AuthenticatedRequest } from "../middleware/auth";
 import {
   createUser,
+  deleteUserById,
   findPublicUserById,
   findUserByEmail,
   updateUserProfile,
@@ -140,6 +141,26 @@ export function registerAuthRoutes({
       }
       console.error("Profile update error:", error);
       res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
+  app.delete("/api/auth/account", authenticateToken, async (req, res) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const deleted = await deleteUserById(userId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Account not found" });
+      }
+
+      res.clearCookie("token", {
+        httpOnly: true,
+        secure: cookieSecure,
+        sameSite: cookieSameSite,
+      });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Account deletion error:", error);
+      res.status(500).json({ error: "Failed to delete account" });
     }
   });
 }

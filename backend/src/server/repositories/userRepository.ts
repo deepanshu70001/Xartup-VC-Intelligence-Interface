@@ -79,3 +79,9 @@ export async function updateUserProfile({
 
   return findPublicUserById(id);
 }
+
+export async function deleteUserById(id: string) {
+  const db = await getMongoDb();
+  const result = await db.collection<UserRecord>(USERS_COLLECTION).deleteOne({ id });
+  return result.deletedCount > 0;
+}

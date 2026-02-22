@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bot, Building2, CheckCircle2, SendHorizontal, Sparkles } from 'lucide-react';
 import { Button } from '../components/ui/Primitives';
 import { useApp } from '../context/AppContext';
@@ -47,6 +47,7 @@ export default function ScoutAssistantPage() {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: crypto.randomUUID(),
@@ -59,6 +60,10 @@ export default function ScoutAssistantPage() {
   const selectedCompanies = useMemo(() => {
     return companies.filter((c) => selectedIds.includes(c.id)).slice(0, 10);
   }, [companies, selectedIds]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages, isSending]);
 
   const toggleCompany = (companyId: string) => {
     setSelectedIds((prev) => {
@@ -173,8 +178,8 @@ export default function ScoutAssistantPage() {
             ))}
           </div>
 
-          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-950 min-h-[520px] p-4 flex flex-col">
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-950 p-4 flex flex-col h-[clamp(360px,58vh,620px)]">
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1 flex flex-col justify-end">
               {messages.length <= 1 && (
                 <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4 text-sm text-neutral-300">
                   Tip: ask for ranked shortlists, thesis-fit explanations, or a diligence plan tailored to your selected context companies.
@@ -207,6 +212,7 @@ export default function ScoutAssistantPage() {
                   Scout is thinking...
                 </div>
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             <form

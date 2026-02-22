@@ -4,9 +4,11 @@ import { Monitor, Bell, Shield, Key, Target, Plus, X, Trash2 } from 'lucide-reac
 import { useApp } from '../context/AppContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
 
 export default function SettingsPage() {
   const { thesis, updateThesis, clearActivities } = useApp();
+  const { deleteAccount } = useAuth();
   
   // Local state for editing thesis to avoid constant context updates
   const [localThesis, setLocalThesis] = useState(thesis);
@@ -40,6 +42,25 @@ export default function SettingsPage() {
       ? localThesis.sectors.filter(s => s !== sector)
       : [...localThesis.sectors, sector];
     setLocalThesis({ ...localThesis, sectors });
+  };
+
+  const handleDeleteAccount = async () => {
+    const firstConfirm = window.confirm(
+      'Delete your account permanently? This cannot be undone.'
+    );
+    if (!firstConfirm) return;
+
+    const typed = window.prompt('Type DELETE to confirm account deletion.');
+    if (typed !== 'DELETE') {
+      toast.error('Account deletion cancelled. Confirmation text did not match.');
+      return;
+    }
+
+    try {
+      await deleteAccount();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete account');
+    }
   };
 
   return (
@@ -192,6 +213,34 @@ export default function SettingsPage() {
             </div>
             <Button variant="outline" className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-900" onClick={clearActivities}>
                 <Trash2 size={16} className="mr-2" /> Clear History
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-neutral-900 border border-red-200 dark:border-red-900 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-red-200 dark:border-red-900">
+          <h2 className="text-lg font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
+            <Trash2 size={20} /> Danger Zone
+          </h2>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+            Permanently delete your account and local app data on this device.
+          </p>
+        </div>
+        <div className="p-6">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <div className="font-medium text-neutral-900 dark:text-white">Delete Account</div>
+              <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                This action is irreversible.
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-300 dark:border-red-900"
+              onClick={() => void handleDeleteAccount()}
+            >
+              <Trash2 size={16} className="mr-2" /> Delete Account
             </Button>
           </div>
         </div>
