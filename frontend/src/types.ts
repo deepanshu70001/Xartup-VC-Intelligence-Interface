@@ -23,6 +23,20 @@ export interface EnrichmentData {
   what_they_do: string[];
   keywords: string[];
   derived_signals: string[];
+  facts?: {
+    location: string | null;
+    employee_count: string | null;
+    founded_year: number | null;
+    total_funding: string | null;
+    stage: string | null;
+    confidence: {
+      location: number;
+      employee_count: number;
+      founded_year: number;
+      total_funding: number;
+      stage: number;
+    };
+  };
   source?: string;
   sources?: string[];
   timestamp: string;

@@ -57,7 +57,7 @@
   height: 300px;
   top: -80px;
   right: -70px;
-  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.18), transparent 65%);
+  background: radial-gradient(circle at center, rgba(163, 163, 163, 0.14), transparent 65%);
   animation: float-slow 12s ease-in-out infinite, pulse-glow 6s ease-in-out infinite;
 }
 
@@ -66,12 +66,12 @@
   height: 240px;
   bottom: -80px;
   left: -60px;
-  background: radial-gradient(circle at center, rgba(99, 102, 241, 0.15), transparent 70%);
+  background: radial-gradient(circle at center, rgba(115, 115, 115, 0.12), transparent 70%);
   animation: float-slow 14s ease-in-out infinite reverse, pulse-glow 7s ease-in-out infinite;
 }
 
 .gradient-aura {
-  background: linear-gradient(120deg, rgba(99, 102, 241, 0.11), rgba(59, 130, 246, 0.07), rgba(16, 185, 129, 0.09));
+  background: linear-gradient(120deg, rgba(64, 64, 64, 0.13), rgba(115, 115, 115, 0.08), rgba(23, 23, 23, 0.12));
   background-size: 220% 220%;
   animation: gradient-shift 10s ease infinite;
 }
@@ -87,4 +87,12 @@
   .surface-pop {
     transition: none !important;
   }
+}
+
+.landing-grid {
+  background-image:
+    linear-gradient(to right, rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at center, black 42%, transparent 88%);
 }

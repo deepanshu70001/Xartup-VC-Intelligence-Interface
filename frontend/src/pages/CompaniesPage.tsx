@@ -16,6 +16,7 @@ type SortDirection = 'asc' | 'desc';
 export default function CompaniesPage() {
   const {
     companies,
+    thesis,
     toggleFavorite,
     enrichingIds,
     enrichCompany,
@@ -36,6 +37,45 @@ export default function CompaniesPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
+
+  const getEvaluationScore = (company: any) => {
+    let score = 25;
+    const industry = String(company.industry || '').toLowerCase();
+    const stage = String(company.stage || '').toLowerCase();
+    const textBlob = [
+      company.description || '',
+      ...(Array.isArray(company.tags) ? company.tags : []),
+      ...(company.enrichment?.keywords || []),
+      ...(company.enrichment?.derived_signals || []),
+    ]
+      .join(' ')
+      .toLowerCase();
+
+    const sectorMatches = (thesis?.sectors || []).filter((sector) =>
+      industry.includes(String(sector).toLowerCase())
+    ).length;
+    score += Math.min(sectorMatches * 18, 36);
+
+    const stageMatches = (thesis?.stages || []).filter((targetStage) =>
+      stage.includes(String(targetStage).toLowerCase())
+    ).length;
+    score += Math.min(stageMatches * 16, 24);
+
+    const keywordMatches = (thesis?.keywords || []).filter((keyword) =>
+      textBlob.includes(String(keyword).toLowerCase())
+    ).length;
+    score += Math.min(keywordMatches * 7, 21);
+
+    if (company.enrichment) score += 12;
+
+    return Math.max(0, Math.min(100, score));
+  };
+
+  const getEvaluationBadgeVariant = (score: number): 'success' | 'warning' | 'neutral' => {
+    if (score >= 75) return 'success';
+    if (score >= 55) return 'warning';
+    return 'neutral';
+  };
 
   useEffect(() => {
     const query = searchParams.get('search');
@@ -146,6 +186,8 @@ export default function CompaniesPage() {
         Domain: c.domain,
         Industry: c.industry,
         Stage: c.stage,
+        Evaluation: getEvaluationScore(c),
+        Tags: Array.isArray(c.tags) ? c.tags.join(', ') : '',
         Description: c.description,
         Enriched: c.enrichment ? 'Yes' : 'No',
         Favorite: c.isFavorite ? 'Yes' : 'No',
@@ -294,14 +336,19 @@ export default function CompaniesPage() {
               <th className="text-left px-4 py-3 cursor-pointer" onClick={() => handleSort('name')}>Company</th>
               <th className="text-left px-4 py-3 cursor-pointer" onClick={() => handleSort('industry')}>Industry</th>
               <th className="text-left px-4 py-3 cursor-pointer" onClick={() => handleSort('stage')}>Stage</th>
+              <th className="text-left px-4 py-3">Evaluation</th>
+              <th className="text-left px-4 py-3">Tags</th>
               <th className="text-left px-4 py-3">Domain</th>
               <th className="text-left px-4 py-3 cursor-pointer" onClick={() => handleSort('createdAt')}>Added</th>
               <th className="text-left px-4 py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {paginatedCompanies.map((company: any) => (
-              <tr key={company.id} className="border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+            {paginatedCompanies.map((company: any) => {
+              const evalScore = getEvaluationScore(company);
+              const tags = Array.isArray(company.tags) ? company.tags : [];
+
+              return <tr key={company.id} className="border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
                 <td className="px-4 py-3">
                   <button onClick={() => toggleSelection(company.id)}>
                     {selectedIds.has(company.id)
@@ -324,6 +371,21 @@ export default function CompaniesPage() {
                 <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{company.industry}</td>
                 <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{company.stage}</td>
                 <td className="px-4 py-3">
+                  <Badge variant={getEvaluationBadgeVariant(evalScore)}>{evalScore}/100</Badge>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1 max-w-[220px]">
+                    {tags.length > 0 ? (
+                      tags.slice(0, 3).map((tag: string) => (
+                        <Badge key={`${company.id}-${tag}`} variant="neutral">{tag}</Badge>
+                      ))
+                    ) : (
+                      <span className="text-xs text-neutral-400">No tags</span>
+                    )}
+                    {tags.length > 3 && <span className="text-xs text-neutral-400">+{tags.length - 3}</span>}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
                   <a href={`https://${company.domain}`} target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">{company.domain}</a>
                 </td>
                 <td className="px-4 py-3 text-neutral-500">{company.createdAt ? new Date(company.createdAt).toLocaleDateString() : '-'}</td>
@@ -345,8 +407,8 @@ export default function CompaniesPage() {
                     <Link to={`/companies/${company.id}`}><Button variant="ghost" size="sm">Open</Button></Link>
                   </div>
                 </td>
-              </tr>
-            ))}
+              </tr>;
+            })}
           </tbody>
         </table>
       </div>

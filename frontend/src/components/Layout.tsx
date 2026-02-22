@@ -105,7 +105,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="lg:hidden flex items-center gap-2 mr-2">
                 <BrandLogo compact />
             </div>
-            <div className="flex items-center w-full max-w-xs sm:max-w-md bg-neutral-100 dark:bg-neutral-800 rounded-full px-4 py-2 transition-colors focus-within:ring-2 focus-within:ring-indigo-500/20">
+            <div className="flex items-center w-full max-w-xs sm:max-w-md bg-neutral-100 dark:bg-neutral-800 rounded-full px-4 py-2 transition-colors focus-within:ring-2 focus-within:ring-neutral-500/20">
               <Search size={18} className="text-neutral-400 mr-2 flex-shrink-0" />
               <input 
                 type="text" 
@@ -122,7 +122,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <motion.div 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm shadow-md cursor-pointer"
+                className="w-9 h-9 bg-neutral-900 dark:bg-neutral-200 rounded-full flex items-center justify-center text-white dark:text-neutral-900 font-medium text-sm shadow-sm cursor-pointer border border-neutral-800 dark:border-neutral-300"
               >
                 {initials}
               </motion.div>
@@ -156,7 +156,7 @@ function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNo
         cn(
           "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative overflow-hidden",
           isActive
-            ? "text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20"
+            ? "text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/20"
             : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white"
         )
       }
@@ -166,7 +166,7 @@ function NavItem({ to, icon, label, onClick }: { to: string; icon: React.ReactNo
           {isActive && (
             <motion.div
               layoutId="active-nav"
-              className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600 dark:bg-indigo-400 rounded-r-full"
+              className="absolute left-0 top-0 bottom-0 w-1 bg-sky-600 dark:bg-sky-300 rounded-r-full"
             />
           )}
           <span className="relative z-10">{icon}</span>

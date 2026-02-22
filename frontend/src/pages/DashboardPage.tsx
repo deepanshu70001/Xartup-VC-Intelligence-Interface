@@ -1,17 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useApp } from '../context/AppContext';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  Building2, 
-  TrendingUp, 
-  List as ListIcon, 
+import {
   ArrowRight,
+  Building2,
   DollarSign,
+  List as ListIcon,
   Plus,
   Target,
-  Zap
+  TrendingUp,
+  Zap,
 } from 'lucide-react';
 import { Button, Badge } from '../components/ui/Primitives';
+import { useApp } from '../context/AppContext';
 import { buildApiUrl, getAuthHeaders, parseApiResponse } from '../lib/api';
 
 interface LiveFeedItem {
@@ -27,22 +28,72 @@ interface LiveFeedItem {
   articleUrl?: string;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06 },
+  },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0 },
+};
+
+function parseFundingToNumber(value?: string): number {
+  if (!value) return 0;
+  const normalized = value.replace(/,/g, '').trim().toUpperCase();
+  const match = normalized.match(/\$?\s*([\d.]+)\s*([KMBT])?/);
+  if (!match) return 0;
+
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) return 0;
+
+  const suffix = match[2] || '';
+  const multiplier =
+    suffix === 'K' ? 1_000 :
+    suffix === 'M' ? 1_000_000 :
+    suffix === 'B' ? 1_000_000_000 :
+    suffix === 'T' ? 1_000_000_000_000 : 1;
+  return amount * multiplier;
+}
+
+function formatCompactMoney(amount: number): string {
+  if (!Number.isFinite(amount) || amount <= 0) return '$0';
+  if (amount >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  return `$${Math.round(amount)}`;
+}
+
+function trendFromValues(current: number, previous: number, asPercent = true): string {
+  if (asPercent) {
+    if (previous <= 0) return current > 0 ? '+100%' : '0%';
+    const pct = ((current - previous) / previous) * 100;
+    const rounded = Math.round(pct);
+    return `${rounded >= 0 ? '+' : ''}${rounded}%`;
+  }
+  const delta = current - previous;
+  return `${delta >= 0 ? '+' : ''}${delta}`;
+}
+
 export default function DashboardPage() {
   const { companies, savedSearches, thesis, activities } = useApp();
   const [internetFeed, setInternetFeed] = useState<LiveFeedItem[]>([]);
 
   const getDotColor = (industry?: string) => {
-    const palette = ['bg-indigo-500', 'bg-emerald-500', 'bg-blue-500', 'bg-purple-500', 'bg-amber-500'];
+    const palette = ['bg-sky-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500', 'bg-cyan-500'];
     if (!industry) return palette[0];
-    const idx = Math.abs(
-      industry.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
-    ) % palette.length;
+    const idx = Math.abs(industry.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0)) % palette.length;
     return palette[idx];
   };
 
   const getScore = (input: string) => {
     const hash = input.split('').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) % 997, 0);
-    return 70 + (hash % 26); // 70 - 95
+    return 70 + (hash % 26);
   };
 
   const toSource = (urlOrLabel?: string) => {
@@ -86,21 +137,24 @@ export default function DashboardPage() {
           return;
         }
 
-        const data = await parseApiResponse<{ items: Array<{ id: string; company: string; title: string; source: string; url: string; publishedAt: string }> }>(response);
-        const mapped: LiveFeedItem[] = data.items.map((item, idx) => {
-          const company = companies.find((c) => c.name.toLowerCase() === item.company.toLowerCase());
-          const ts = new Date(item.publishedAt).getTime() || Date.now() - idx * 60000;
+        const data = await parseApiResponse<{
+          items: Array<{ id: string; company: string; title: string; source: string; url: string; publishedAt: string }>;
+        }>(response);
+
+        const mapped: LiveFeedItem[] = data.items.map((entry, idx) => {
+          const company = companies.find((c) => c.name.toLowerCase() === entry.company.toLowerCase());
+          const ts = new Date(entry.publishedAt).getTime() || Date.now() - idx * 60000;
           return {
-            id: item.id,
+            id: entry.id,
             companyId: company?.id,
-            name: item.company,
-            action: item.title,
-            source: item.source || 'Google News',
+            name: entry.company,
+            action: entry.title,
+            source: entry.source || 'Google News',
             time: timeAgo(ts),
-            score: getScore(`${item.company}-${item.title}`),
+            score: getScore(`${entry.company}-${entry.title}`),
             dotColor: getDotColor(company?.industry),
             timestamp: ts,
-            articleUrl: item.url,
+            articleUrl: entry.url,
           };
         });
 
@@ -119,12 +173,11 @@ export default function DashboardPage() {
   }, [companies]);
 
   const localFeedItems = useMemo<LiveFeedItem[]>(() => {
-    const enrichmentItems: LiveFeedItem[] = companies.flatMap((company) => {
+    const enrichmentItems = companies.flatMap((company) => {
       if (!company.enrichment) return [];
       const ts = new Date(company.enrichment.timestamp).getTime() || Date.now();
       const signals = company.enrichment.derived_signals?.slice(0, 2) || [];
       const primarySignals = signals.length > 0 ? signals : [company.enrichment.summary];
-
       return primarySignals.map((signal, idx) => ({
         id: `${company.id}-enrichment-${idx}`,
         companyId: company.id,
@@ -138,7 +191,7 @@ export default function DashboardPage() {
       }));
     });
 
-    const activityItems: LiveFeedItem[] = activities
+    const activityItems = activities
       .filter((a) => a.action === 'Enriched Company')
       .slice(0, 8)
       .map((a, idx) => {
@@ -157,13 +210,9 @@ export default function DashboardPage() {
         };
       });
 
-    const merged = [...enrichmentItems, ...activityItems]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 8);
-
+    const merged = [...enrichmentItems, ...activityItems].sort((a, b) => b.timestamp - a.timestamp).slice(0, 8);
     if (merged.length > 0) return merged;
 
-    // Fallback: generate feed from tracked companies so dashboard is never empty.
     return companies.slice(0, 6).map((company, idx) => {
       const ts = Date.now() - idx * 4 * 60 * 60 * 1000;
       return {
@@ -181,222 +230,334 @@ export default function DashboardPage() {
   }, [activities, companies]);
 
   const liveFeedItems = useMemo(() => {
-    const merged = [...internetFeed, ...localFeedItems]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 10);
-    return merged;
+    return [...internetFeed, ...localFeedItems].sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
   }, [internetFeed, localFeedItems]);
 
-  // Calculate some stats
-  const totalCompanies = companies.length;
-  const newSignals = liveFeedItems.filter(
-    (item) => Date.now() - item.timestamp < 7 * 24 * 60 * 60 * 1000
-  ).length;
+  const now = Date.now();
+
+  const companyFitScore = useMemo(() => {
+    return (company: any) => {
+      const industry = String(company.industry || '').toLowerCase();
+      const stage = String(company.stage || '').toLowerCase();
+      const textBlob = [company.description || '', ...(Array.isArray(company.tags) ? company.tags : []), ...(company.enrichment?.keywords || [])]
+        .join(' ')
+        .toLowerCase();
+      let score = 25;
+      const sectorMatches = (thesis?.sectors || []).filter((sector) => industry.includes(String(sector).toLowerCase())).length;
+      const stageMatches = (thesis?.stages || []).filter((targetStage) => stage.includes(String(targetStage).toLowerCase())).length;
+      const keywordMatches = (thesis?.keywords || []).filter((keyword) => textBlob.includes(String(keyword).toLowerCase())).length;
+      score += Math.min(sectorMatches * 18, 36);
+      score += Math.min(stageMatches * 16, 24);
+      score += Math.min(keywordMatches * 7, 21);
+      if (company.enrichment) score += 10;
+      return Math.max(0, Math.min(100, score));
+    };
+  }, [thesis]);
+
+  const dashboardMetrics = useMemo(() => {
+    const totalCompanies = companies.length;
+    const thesisMatches = companies.filter((company) => companyFitScore(company) >= 60).length;
+
+    const recentCompanies = companies.filter((company) => {
+      if (!company.createdAt) return false;
+      return now - new Date(company.createdAt).getTime() <= 30 * DAY_MS;
+    }).length;
+    const previousCompanies = companies.filter((company) => {
+      if (!company.createdAt) return false;
+      const age = now - new Date(company.createdAt).getTime();
+      return age > 30 * DAY_MS && age <= 60 * DAY_MS;
+    }).length;
+
+    const weightedDealFlow = companies.reduce((acc, company) => {
+      const funding = parseFundingToNumber(company.total_funding);
+      const stage = String(company.stage || '').toLowerCase();
+      const weight =
+        stage.includes('seed') ? 0.2 :
+        stage.includes('series a') ? 0.35 :
+        stage.includes('series b') ? 0.5 :
+        stage.includes('series c') || stage.includes('series d') || stage.includes('late') ? 0.65 :
+        stage.includes('public') ? 0.8 : 0.3;
+      return acc + funding * weight;
+    }, 0);
+
+    const recentDealFlow = companies
+      .filter((company) => {
+        if (!company.createdAt) return false;
+        return now - new Date(company.createdAt).getTime() <= 30 * DAY_MS;
+      })
+      .reduce((acc, company) => acc + parseFundingToNumber(company.total_funding), 0);
+    const previousDealFlow = companies
+      .filter((company) => {
+        if (!company.createdAt) return false;
+        const age = now - new Date(company.createdAt).getTime();
+        return age > 30 * DAY_MS && age <= 60 * DAY_MS;
+      })
+      .reduce((acc, company) => acc + parseFundingToNumber(company.total_funding), 0);
+
+    const activeSectorsList = Array.from(new Set(companies.map((company) => company.industry).filter(Boolean)));
+
+    return {
+      totalCompanies,
+      thesisMatches,
+      weightedDealFlow,
+      activeSectorsList,
+      thesisTrend: trendFromValues(thesisMatches, Math.max(0, thesisMatches - recentCompanies), false),
+      pipelineTrend: trendFromValues(recentCompanies, previousCompanies, false),
+      dealFlowTrend: trendFromValues(recentDealFlow, previousDealFlow, true),
+    };
+  }, [companies, companyFitScore, now]);
+
+  const pipelineStageCounts = useMemo(() => {
+    const counts = { Watchlist: 0, Outreach: 0, 'Due Diligence': 0, 'Term Sheet': 0 };
+    companies.forEach((company) => {
+      const stage = String(company.stage || '').toLowerCase();
+      if (stage.includes('public') || stage.includes('late')) counts['Term Sheet'] += 1;
+      else if (stage.includes('series c') || stage.includes('series d') || stage.includes('series b')) counts['Due Diligence'] += 1;
+      else if (stage.includes('series a')) counts['Outreach'] += 1;
+      else counts['Watchlist'] += 1;
+    });
+    return counts;
+  }, [companies]);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 md:space-y-8 max-w-7xl mx-auto pb-6 md:pb-10">
+      <motion.div variants={item} className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">Intelligence Command Center</h1>
-          <p className="text-neutral-500 dark:text-neutral-400 mt-2 text-lg">
-            Tracking <span className="font-semibold text-neutral-900 dark:text-white">{totalCompanies}</span> companies across <span className="font-semibold text-neutral-900 dark:text-white">{thesis.sectors.length}</span> focus sectors.
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">Intelligence Command Center</h1>
+          <p className="text-neutral-500 dark:text-neutral-400 mt-1 text-sm md:text-base">
+            Tracking <span className="font-semibold text-neutral-900 dark:text-white">{dashboardMetrics.totalCompanies}</span> companies across{' '}
+            <span className="font-semibold text-neutral-900 dark:text-white">{dashboardMetrics.activeSectorsList.length}</span> active sectors.
           </p>
         </div>
-        <div className="flex gap-3">
-            <Link to="/companies">
-                <Button>
-                    <Plus size={18} className="mr-2" /> Add Company
-                </Button>
-            </Link>
-        </div>
-      </div>
+        <Link to="/companies">
+          <Button>
+            <Plus size={16} className="mr-2" /> Add Company
+          </Button>
+        </Link>
+      </motion.div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          label="Thesis Matches" 
-          value={newSignals} 
-          icon={<Target className="text-indigo-600 dark:text-indigo-400" size={24} />} 
-          trend="+12%"
-          trendUp={true}
-          description="High conviction signals"
-        />
-        <StatCard 
-          label="Pipeline Volume" 
-          value={totalCompanies} 
-          icon={<Building2 className="text-emerald-600 dark:text-emerald-400" size={24} />} 
-          trend="+5"
-          trendUp={true}
-          description="Active companies"
-        />
-        <StatCard 
-          label="Est. Deal Flow" 
-          value="$45M" 
-          icon={<DollarSign className="text-blue-600 dark:text-blue-400" size={24} />} 
-          trend="+8%"
-          trendUp={true}
-          description="Weighted pipeline value"
-        />
-        <StatCard 
-          label="Active Sectors" 
-          value={thesis.sectors.length} 
-          icon={<TrendingUp className="text-orange-600 dark:text-orange-400" size={24} />} 
-          customBadge={<div className="flex -space-x-2 overflow-hidden ml-2">
-            {thesis.sectors.slice(0, 3).map((s, i) => (
-                <div key={i} className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900 flex items-center justify-center text-[10px] font-bold" title={s}>
-                    {s[0]}
-                </div>
-            ))}
-          </div>}
+      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard label="Thesis Matches" tone="sky" value={dashboardMetrics.thesisMatches} trend={dashboardMetrics.thesisTrend} trendUp={!dashboardMetrics.thesisTrend.startsWith('-')} icon={<Target size={18} />} description="High conviction signals" />
+        <StatCard label="Pipeline Volume" tone="emerald" value={dashboardMetrics.totalCompanies} trend={dashboardMetrics.pipelineTrend} trendUp={!dashboardMetrics.pipelineTrend.startsWith('-')} icon={<Building2 size={18} />} description="Active companies" />
+        <StatCard label="Est. Deal Flow" tone="amber" value={formatCompactMoney(dashboardMetrics.weightedDealFlow)} trend={dashboardMetrics.dealFlowTrend} trendUp={!dashboardMetrics.dealFlowTrend.startsWith('-')} icon={<DollarSign size={18} />} description="Weighted pipeline value" />
+        <StatCard
+          label="Active Sectors"
+          tone="violet"
+          value={dashboardMetrics.activeSectorsList.length}
+          icon={<TrendingUp size={18} />}
           description="Focus areas"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Intelligence Feed */}
-        <div className="lg:col-span-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2">
-                <Zap className="text-amber-500" size={20} />
-                <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Live Intelligence Feed</h2>
+          customBadge={
+            <div className="flex -space-x-2 overflow-hidden ml-2">
+              {dashboardMetrics.activeSectorsList.slice(0, 3).map((sector, index) => (
+                <div key={index} className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 border-2 border-white dark:border-neutral-900 flex items-center justify-center text-[10px] font-bold" title={sector}>
+                  {sector[0]}
+                </div>
+              ))}
             </div>
-            <Link to="/companies" className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-medium flex items-center">
-              View all <ArrowRight size={16} className="ml-1" />
+          }
+        />
+      </motion.div>
+
+      <motion.div variants={item} className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
+        <section className="xl:col-span-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 md:p-6 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <Zap className="text-amber-500" size={18} />
+              <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">Live Intelligence Feed</h2>
+            </div>
+            <Link to="/companies" className="text-xs md:text-sm text-sky-700 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-200 font-medium flex items-center">
+              View all <ArrowRight size={14} className="ml-1" />
             </Link>
           </div>
 
-          <div className="space-y-0">
-            {liveFeedItems.map((item) => (
-              <React.Fragment key={item.id}>
+          <div className="space-y-1">
+            {liveFeedItems.map((feedItem) => (
+              <React.Fragment key={feedItem.id}>
                 <SignalItem
-                  name={item.name}
-                  action={item.action}
-                  source={item.source}
-                  time={item.time}
-                  dotColor={item.dotColor}
-                  score={item.score}
-                  companyId={item.companyId}
-                  articleUrl={item.articleUrl}
+                  name={feedItem.name}
+                  action={feedItem.action}
+                  source={feedItem.source}
+                  time={feedItem.time}
+                  dotColor={feedItem.dotColor}
+                  score={feedItem.score}
+                  companyId={feedItem.companyId}
+                  articleUrl={feedItem.articleUrl}
                 />
               </React.Fragment>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* Pipeline Summary / Saved Searches */}
-        <div className="space-y-6">
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-neutral-900 dark:text-white mb-4">Pipeline Stages</h2>
-                <div className="space-y-4">
-                    <PipelineStage label="Watchlist" count={12} color="bg-neutral-500" />
-                    <PipelineStage label="Outreach" count={5} color="bg-blue-500" />
-                    <PipelineStage label="Due Diligence" count={2} color="bg-amber-500" />
-                    <PipelineStage label="Term Sheet" count={1} color="bg-green-500" />
-                </div>
-            </div>
-
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Saved Searches</h2>
-                <Link to="/saved" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">View all</Link>
-            </div>
-
+        <div className="space-y-4 md:space-y-6">
+          <section className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 md:p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">Pipeline Stages</h2>
             <div className="space-y-3">
-                {savedSearches.length > 0 ? (
-                savedSearches.slice(0, 3).map(search => (
-                    <Link
+              <PipelineStage label="Watchlist" count={pipelineStageCounts.Watchlist} tone="neutral" />
+              <PipelineStage label="Outreach" count={pipelineStageCounts.Outreach} tone="sky" />
+              <PipelineStage label="Due Diligence" count={pipelineStageCounts['Due Diligence']} tone="amber" />
+              <PipelineStage label="Term Sheet" count={pipelineStageCounts['Term Sheet']} tone="emerald" />
+            </div>
+          </section>
+
+          <section className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 md:p-6 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">Saved Searches</h2>
+              <Link to="/saved" className="text-xs text-neutral-600 dark:text-neutral-300 hover:underline">View all</Link>
+            </div>
+
+            <div className="space-y-2">
+              {savedSearches.length > 0 ? (
+                savedSearches.slice(0, 4).map((search) => (
+                  <Link
                       key={search.id}
                       to={`/companies?savedSearchId=${search.id}`}
-                      className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer group"
+                      className="flex items-center justify-between p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors group"
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                                <ListIcon size={14} />
-                            </div>
-                            <span className="font-medium text-sm text-neutral-900 dark:text-white truncate max-w-[120px]">{search.name}</span>
-                        </div>
-                        <ArrowRight size={14} className="text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </Link>
+                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/25 flex items-center justify-center text-sky-700 dark:text-sky-300">
+                        <ListIcon size={14} />
+                      </div>
+                      <span className="font-medium text-sm text-neutral-900 dark:text-white truncate">{search.name}</span>
+                    </div>
+                    <ArrowRight size={14} className="text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Link>
                 ))
-                ) : (
+              ) : (
                 <div className="text-center py-4">
-                    <p className="text-xs text-neutral-400 italic">No saved searches.</p>
+                  <p className="text-xs text-neutral-400 italic">No saved searches.</p>
                 </div>
-                )}
+              )}
             </div>
-            </div>
+          </section>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
-function StatCard({ label, value, icon, trend, trendUp, customBadge, description }: { label: string, value: number | string, icon: React.ReactNode, trend?: string, trendUp?: boolean, customBadge?: React.ReactNode, description?: string }) {
+function StatCard({
+  label,
+  value,
+  tone = 'neutral',
+  icon,
+  trend,
+  trendUp,
+  customBadge,
+  description,
+}: {
+  label: string;
+  value: number | string;
+  tone?: 'neutral' | 'sky' | 'emerald' | 'amber' | 'violet';
+  icon: React.ReactNode;
+  trend?: string;
+  trendUp?: boolean;
+  customBadge?: React.ReactNode;
+  description?: string;
+}) {
+  const toneStyles = {
+    neutral: 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200',
+    sky: 'bg-sky-100 dark:bg-sky-900/25 text-sky-700 dark:text-sky-300',
+    emerald: 'bg-emerald-100 dark:bg-emerald-900/25 text-emerald-700 dark:text-emerald-300',
+    amber: 'bg-amber-100 dark:bg-amber-900/25 text-amber-700 dark:text-amber-300',
+    violet: 'bg-violet-100 dark:bg-violet-900/25 text-violet-700 dark:text-violet-300',
+  } as const;
+
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+    <motion.div whileHover={{ y: -2 }} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-sm">
       <div className="flex justify-between items-start mb-2">
-        <div className="text-neutral-500 dark:text-neutral-400 font-medium text-sm uppercase tracking-wide">{label}</div>
-        <div className="p-2 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-          {icon}
-        </div>
+        <div className="text-neutral-500 dark:text-neutral-400 font-medium text-xs uppercase tracking-wide">{label}</div>
+        <div className={`p-2 rounded-lg ${toneStyles[tone]}`}>{icon}</div>
       </div>
-      <div className="flex items-end gap-3 mb-1">
-        <div className="text-3xl font-bold text-neutral-900 dark:text-white">{value}</div>
+      <div className="flex items-end gap-2 mb-1">
+        <div className="text-2xl md:text-3xl font-semibold text-neutral-900 dark:text-white">{value}</div>
         {trend && (
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full mb-1.5 ${trendUp ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700'}`}>
+          <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full mb-1 ${trendUp ? 'bg-emerald-100 dark:bg-emerald-900/25 text-emerald-700 dark:text-emerald-300' : 'bg-red-100 dark:bg-red-900/25 text-red-700 dark:text-red-300'}`}>
             {trend}
           </span>
         )}
         {customBadge}
       </div>
       {description && <div className="text-xs text-neutral-400">{description}</div>}
-    </div>
+    </motion.div>
   );
 }
 
-const SignalItem = ({ name, action, time, dotColor, source, score, companyId, articleUrl }: { name: string, action: string, time: string, dotColor: string, source: string, score: number, companyId?: string, articleUrl?: string }) => {
-    const Wrapper = ({ children }: { children: React.ReactNode }) =>
-      articleUrl ? (
-        <a href={articleUrl} target="_blank" rel="noreferrer">
-          {children}
-        </a>
-      ) : companyId ? (
-        <Link to={`/companies/${companyId}`}>{children}</Link>
-      ) : (
-        <>{children}</>
-      );
+function SignalItem({
+  name,
+  action,
+  time,
+  dotColor,
+  source,
+  score,
+  companyId,
+  articleUrl,
+}: {
+  name: string;
+  action: string;
+  time: string;
+  dotColor: string;
+  source: string;
+  score: number;
+  companyId?: string;
+  articleUrl?: string;
+}) {
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
+    articleUrl ? (
+      <a href={articleUrl} target="_blank" rel="noreferrer">{children}</a>
+    ) : companyId ? (
+      <Link to={`/companies/${companyId}`}>{children}</Link>
+    ) : (
+      <>{children}</>
+    );
 
-    return (
-        <Wrapper>
-          <div className="flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 px-4 -mx-4 transition-colors cursor-pointer group rounded-lg">
-              <div className="flex items-center gap-4">
-                  <div className={`w-2 h-2 rounded-full ${dotColor} flex-shrink-0`}></div>
-                  <div>
-                      <div className="flex items-center gap-2">
-                          <span className="text-neutral-900 dark:text-white font-bold text-base">{name}</span>
-                          <Badge variant="neutral" className="text-[10px] py-0 h-5">{source}</Badge>
-                      </div>
-                      <div className="text-neutral-600 dark:text-neutral-400 text-sm mt-0.5">{action}</div>
-                  </div>
-              </div>
-              <div className="flex items-center gap-4">
-                  <div className="text-right hidden sm:block">
-                      <div className="text-xs text-neutral-400 font-medium uppercase tracking-wider">Score</div>
-                      <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{score}</div>
-                  </div>
-                  <div className="text-xs text-neutral-400 w-16 text-right">{time}</div>
-                </div>
+  return (
+    <Wrapper>
+      <div className="flex items-center justify-between py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 px-2 md:px-3 -mx-2 md:-mx-3 rounded-lg transition-colors">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`w-2 h-2 rounded-full ${dotColor} flex-shrink-0`}></div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-neutral-900 dark:text-white font-semibold text-sm truncate">{name}</span>
+              <Badge variant="neutral" className="text-[10px] py-0 h-5">{source}</Badge>
+            </div>
+            <div className="text-neutral-600 dark:text-neutral-400 text-xs md:text-sm mt-0.5 truncate">{action}</div>
           </div>
-        </Wrapper>
-    )
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="text-right hidden sm:block">
+            <div className="text-[10px] text-neutral-400 font-medium uppercase tracking-wider">Score</div>
+            <div className="text-base font-semibold text-neutral-900 dark:text-neutral-100">{score}</div>
+          </div>
+          <div className="text-xs text-neutral-400 w-12 text-right">{time}</div>
+        </div>
+      </div>
+    </Wrapper>
+  );
 }
 
-const PipelineStage = ({ label, count, color }: { label: string, count: number, color: string }) => (
-    <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-            <div className={`w-2 h-8 rounded-full ${color}`}></div>
-            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>
-        </div>
-        <span className="text-sm font-bold text-neutral-900 dark:text-white">{count}</span>
+function PipelineStage({
+  label,
+  count,
+  tone = 'neutral',
+}: {
+  label: string;
+  count: number;
+  tone?: 'neutral' | 'sky' | 'amber' | 'emerald';
+}) {
+  const toneStyles = {
+    neutral: 'bg-neutral-300 dark:bg-neutral-600',
+    sky: 'bg-sky-500',
+    amber: 'bg-amber-500',
+    emerald: 'bg-emerald-500',
+  } as const;
+
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 px-3 py-2.5">
+      <div className="flex items-center gap-2.5">
+        <span className={`h-2 w-2 rounded-full ${toneStyles[tone]}`} />
+        <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>
+      </div>
+      <span className="text-sm font-semibold text-neutral-900 dark:text-white">{count}</span>
     </div>
-)
+  );
+}

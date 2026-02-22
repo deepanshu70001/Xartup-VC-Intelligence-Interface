@@ -9,7 +9,7 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
           <div className="text-neutral-700 dark:text-neutral-300 font-semibold">FlowStack</div>
           <Link
             to="/about"
-            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
+            className="text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white font-medium"
           >
             About
           </Link>

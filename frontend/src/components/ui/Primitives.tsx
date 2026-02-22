@@ -14,13 +14,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center whitespace-nowrap rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] hover:-translate-y-0.5 surface-pop",
+          "inline-flex items-center justify-center whitespace-nowrap rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] hover:-translate-y-0.5 surface-pop",
           {
-            'bg-indigo-600 text-white hover:bg-indigo-700 border border-transparent': variant === 'primary',
-            'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700': variant === 'secondary',
-            'bg-transparent border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800': variant === 'outline',
+            'bg-neutral-900 text-white hover:bg-neutral-800 border border-transparent dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200': variant === 'primary',
+            'bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800': variant === 'secondary',
+            'bg-transparent border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100/80 dark:hover:bg-neutral-800': variant === 'outline',
             'bg-transparent text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800': variant === 'ghost',
-            'bg-red-600 text-white hover:bg-red-700': variant === 'danger',
+            'bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-neutral-200 dark:text-neutral-900 dark:hover:bg-neutral-300': variant === 'danger',
             
             'h-8 px-3 text-xs': size === 'sm',
             'h-10 px-4 text-sm': size === 'md',
@@ -46,9 +46,9 @@ export function Badge({ children, className, variant = 'neutral' }: { children: 
       "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-transform duration-200 hover:scale-[1.03]",
       {
         'bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200': variant === 'neutral',
-        'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': variant === 'success',
-        'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300': variant === 'warning',
-        'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300': variant === 'indigo',
+        'bg-neutral-200 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-600': variant === 'success',
+        'bg-neutral-300 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100 border border-neutral-400 dark:border-neutral-600': variant === 'warning',
+        'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700': variant === 'indigo',
       },
       className
     )}>

@@ -52,6 +52,12 @@ export interface Activity {
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
+function shouldReplaceText(currentValue: string | undefined, incomingValue: string | null, confidence: number) {
+  if (!incomingValue || confidence < 0.55) return false;
+  const normalizedCurrent = String(currentValue || '').trim().toLowerCase();
+  return normalizedCurrent === '' || normalizedCurrent === 'unknown' || normalizedCurrent === 'undisclosed';
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   
@@ -374,9 +380,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       const enrichmentData = await parseApiResponse<any>(response);
+      const facts = enrichmentData?.facts;
+      const confidence = facts?.confidence || {};
       
       const updatedCompany = {
         ...company,
+        location: shouldReplaceText(company.location, facts?.location ?? null, Number(confidence.location))
+          ? String(facts.location)
+          : company.location,
+        employee_count: shouldReplaceText(
+          company.employee_count,
+          facts?.employee_count ?? null,
+          Number(confidence.employee_count)
+        )
+          ? String(facts.employee_count)
+          : company.employee_count,
+        total_funding: shouldReplaceText(
+          company.total_funding,
+          facts?.total_funding ?? null,
+          Number(confidence.total_funding)
+        )
+          ? String(facts.total_funding)
+          : company.total_funding,
+        stage: shouldReplaceText(company.stage, facts?.stage ?? null, Number(confidence.stage))
+          ? String(facts.stage)
+          : company.stage,
+        founded_year:
+          Number.isInteger(facts?.founded_year) &&
+          Number(confidence.founded_year) >= 0.6 &&
+          (!company.founded_year || company.founded_year >= new Date().getFullYear())
+            ? Number(facts.founded_year)
+            : company.founded_year,
         enrichment: enrichmentData,
       };
 

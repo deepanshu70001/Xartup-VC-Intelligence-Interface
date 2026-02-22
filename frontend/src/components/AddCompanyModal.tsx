@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/Primitives';
 import { useApp } from '../context/AppContext';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface AddCompanyModalProps {
   isOpen: boolean;
@@ -12,14 +13,16 @@ interface AddCompanyModalProps {
 }
 
 export function AddCompanyModal({ isOpen, onClose }: AddCompanyModalProps) {
-  const { addCompany } = useApp(); // We need to add this to AppContext
+  const { addCompany } = useApp();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     domain: '',
     industry: '',
     stage: 'Seed',
-    description: ''
+    description: '',
+    tags: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,24 +37,40 @@ export function AddCompanyModal({ isOpen, onClose }: AddCompanyModalProps) {
         return;
       }
 
+      const normalizedDomain = formData.domain
+        .trim()
+        .replace(/^https?:\/\//i, '')
+        .replace(/\/+$/, '');
+
+      const companyId = uuidv4();
+      const parsedTags = formData.tags
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean);
       const newCompany = {
-        id: uuidv4(),
+        id: companyId,
         ...formData,
-        logo_url: `https://logo.clearbit.com/${formData.domain}`,
+        domain: normalizedDomain,
+        logo_url: `https://logo.clearbit.com/${normalizedDomain}`,
         createdAt: new Date().toISOString(),
-        lists: [],
-        signals: []
+        location: 'Unknown',
+        founded_year: new Date().getFullYear(),
+        employee_count: 'Unknown',
+        total_funding: 'Undisclosed',
+        tags: parsedTags
       };
 
       addCompany(newCompany);
       toast.success("Company added successfully");
       onClose();
+      navigate(`/companies/${companyId}`);
       setFormData({
         name: '',
         domain: '',
         industry: '',
         stage: 'Seed',
-        description: ''
+        description: '',
+        tags: ''
       });
     } catch (error) {
       console.error(error);
@@ -144,6 +163,17 @@ export function AddCompanyModal({ isOpen, onClose }: AddCompanyModalProps) {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white h-24 resize-none"
                   placeholder="Brief description..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Tags (comma separated)</label>
+                <input
+                  type="text"
+                  value={formData.tags}
+                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                  className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:ring-2 focus:ring-neutral-400 outline-none dark:text-white"
+                  placeholder="e.g. AI, B2B SaaS, fintech infra"
                 />
               </div>
 

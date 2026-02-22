@@ -31,17 +31,70 @@ JSON schema:
   "summary": "1-2 sentences",
   "what_they_do": ["3-6 bullets"],
   "keywords": ["5-10 concise keywords"],
-  "derived_signals": ["2-4 inferred signals from the scraped pages"]
+  "derived_signals": ["2-4 inferred signals from the scraped pages"],
+  "facts": {
+    "location": "city/country or null",
+    "employee_count": "employee range/text or null",
+    "founded_year": 2020,
+    "total_funding": "formatted amount or null",
+    "stage": "Seed/Series A/etc or null",
+    "confidence": {
+      "location": 0.0,
+      "employee_count": 0.0,
+      "founded_year": 0.0,
+      "total_funding": 0.0,
+      "stage": 0.0
+    }
+  }
 }
 
 Rules:
 - Keep statements grounded in provided content.
 - "derived_signals" should infer evidence like careers presence, recent updates, docs/changelog, hiring, etc.
+- Use null for unknown fields in "facts".
+- confidence values must be between 0 and 1.
 - No markdown, no extra text.
 
 CONTENT:
 ${textContent}
 `;
+}
+
+function clampConfidence(value: unknown) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  if (numeric < 0) return 0;
+  if (numeric > 1) return 1;
+  return numeric;
+}
+
+function normalizeEnrichmentData(raw: any) {
+  const facts = raw?.facts || {};
+  const confidence = facts?.confidence || {};
+
+  return {
+    summary: typeof raw?.summary === "string" ? raw.summary : "",
+    what_they_do: Array.isArray(raw?.what_they_do) ? raw.what_they_do : [],
+    keywords: Array.isArray(raw?.keywords) ? raw.keywords : [],
+    derived_signals: Array.isArray(raw?.derived_signals) ? raw.derived_signals : [],
+    facts: {
+      location: typeof facts?.location === "string" ? facts.location : null,
+      employee_count: typeof facts?.employee_count === "string" ? facts.employee_count : null,
+      founded_year:
+        Number.isInteger(facts?.founded_year) && facts.founded_year > 1700
+          ? facts.founded_year
+          : null,
+      total_funding: typeof facts?.total_funding === "string" ? facts.total_funding : null,
+      stage: typeof facts?.stage === "string" ? facts.stage : null,
+      confidence: {
+        location: clampConfidence(confidence?.location),
+        employee_count: clampConfidence(confidence?.employee_count),
+        founded_year: clampConfidence(confidence?.founded_year),
+        total_funding: clampConfidence(confidence?.total_funding),
+        stage: clampConfidence(confidence?.stage),
+      },
+    },
+  };
 }
 
 export async function enrichCompanyUrl(url: string, apiKey: string) {
@@ -106,7 +159,7 @@ export async function enrichCompanyUrl(url: string, apiKey: string) {
     throw new Error("No content returned from Groq");
   }
 
-  const enrichmentData = JSON.parse(jsonContent);
+  const enrichmentData = normalizeEnrichmentData(JSON.parse(jsonContent));
   const scrapedSources = validPages.map((page) => page.url);
 
   return {
