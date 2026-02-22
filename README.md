@@ -11,7 +11,7 @@ AI-assisted deal flow tracking app for thesis-driven investors.
 ## Tech Stack
 
 - Frontend: React 19, TypeScript, Vite, Tailwind CSS v4, Framer Motion
-- Backend: Express + Vite middleware (dev), Better-SQLite3
+- Backend: Express + Vite middleware (dev), MongoDB Node Driver
 - Auth: JWT in HTTP-only cookies + bcryptjs
 - Enrichment: Groq API + Cheerio scraping
 
@@ -67,6 +67,8 @@ npm run dev
 ```
 App runs at `http://localhost:3000`.
 
+Note: local dev now requires `MONGODB_URI` to be set.
+
 4. Type-check:
 ```bash
 npm run lint
@@ -86,6 +88,33 @@ npm start
 - `npm run preview`: Preview Vite build (frontend only).
 - `npm start`: Runs production server (`NODE_ENV=production` via `tsx`).
 - `npm run clean`: Removes `dist` with cross-platform Node script.
+
+## Deployment
+
+### Node Version
+- Recommended: Node.js `24.x` (LTS)
+- Also supported: Node.js `22.x`
+
+### Render (Backend)
+- Build command: `npm run build`
+- Start command: `npm start`
+- Health check path: `/api/health`
+- Required env vars:
+  - `NODE_ENV=production`
+  - `MONGODB_URI=...`
+  - `MONGODB_DB_NAME=harmonicvc`
+  - `JWT_SECRET=...`
+  - `GROQ_API_KEY=...`
+  - `CORS_ORIGIN=https://your-app.vercel.app` (origin only, no path like `/landing`)
+  - `CORS_ALLOW_VERCEL=true`
+  - `COOKIE_SECURE=true`
+  - `COOKIE_SAMESITE=none`
+
+### Vercel (Frontend)
+- Build command: `npm run build`
+- Output directory: `dist`
+- Required env vars:
+  - `VITE_API_URL=https://your-backend.onrender.com`
 
 ## Features
 
