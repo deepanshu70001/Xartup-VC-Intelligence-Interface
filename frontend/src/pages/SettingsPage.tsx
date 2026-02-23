@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../components/ui/Primitives';
-import { Monitor, Bell, Shield, Key, Target, Plus, X, Trash2 } from 'lucide-react';
+import { Monitor, Bell, Shield, Target, Plus, X, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { toast } from 'sonner';
@@ -50,14 +50,14 @@ export default function SettingsPage() {
     );
     if (!firstConfirm) return;
 
-    const typed = window.prompt('Type DELETE to confirm account deletion.');
-    if (typed !== 'DELETE') {
-      toast.error('Account deletion cancelled. Confirmation text did not match.');
+    const password = window.prompt('Enter your password to delete your account.');
+    if (!password || !password.trim()) {
+      toast.error('Account deletion cancelled. Password is required.');
       return;
     }
 
     try {
-      await deleteAccount();
+      await deleteAccount(password);
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete account');
     }
@@ -246,38 +246,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-neutral-200 dark:border-neutral-800">
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
-            <Key size={20} /> API Configuration
-          </h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Manage your API keys for enrichment services.</p>
-        </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Groq API Key</label>
-              <div className="flex gap-2">
-                <input 
-                  type="password" 
-                  value="sk-................................" 
-                  disabled
-                  className="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-500"
-                />
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    toast.info('Update GROQ_API_KEY in backend environment variables and redeploy.')
-                  }
-                >
-                  Update
-                </Button>
-              </div>
-              <p className="text-xs text-neutral-500 mt-1">Key is securely stored in environment variables.</p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

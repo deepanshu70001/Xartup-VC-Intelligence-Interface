@@ -10,6 +10,7 @@ import { initializeMongo } from "./db/mongo";
 import { registerHealthRoutes } from "./routes/healthRoutes";
 import { registerAuthRoutes } from "./routes/authRoutes";
 import { registerAiRoutes } from "./routes/aiRoutes";
+import { registerAppStateRoutes } from "./routes/appStateRoutes";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +36,7 @@ export async function createApp() {
     cookieSameSite: env.cookieSameSite,
     authenticateToken,
   });
+  registerAppStateRoutes({ app, authenticateToken });
   registerAiRoutes({ app, authenticateToken });
 
   if (!env.isProd) {

@@ -8,9 +8,11 @@ import {
   createUser,
   deleteUserById,
   findPublicUserById,
+  findUserById,
   findUserByEmail,
   updateUserProfile,
 } from "../repositories/userRepository";
+import { deleteUserAppState } from "../repositories/appStateRepository";
 
 export function registerAuthRoutes({
   app,
@@ -27,11 +29,16 @@ export function registerAuthRoutes({
 }) {
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { name, email, password } = req.body;
+      const { name, email, password, company, location } = req.body;
 
       if (!name || !email || !password) {
         return res.status(400).json({ error: "All fields are required" });
       }
+
+      const normalizedCompany =
+        typeof company === "string" && company.trim() ? company.trim() : null;
+      const normalizedLocation =
+        typeof location === "string" && location.trim() ? location.trim() : null;
 
       const hashedPassword = await bcrypt.hash(password, 10);
       const id = uuidv4();
@@ -42,8 +49,8 @@ export function registerAuthRoutes({
           name,
           email,
           password: hashedPassword,
-          company: null,
-          location: null,
+          company: normalizedCompany,
+          location: normalizedLocation,
         });
       } catch (error: any) {
         if (error instanceof MongoServerError && error.code === 11000) {
@@ -60,7 +67,16 @@ export function registerAuthRoutes({
         maxAge: 24 * 60 * 60 * 1000,
       });
 
-      res.json({ user: { id, name, email }, token });
+      res.json({
+        user: {
+          id,
+          name,
+          email,
+          company: normalizedCompany,
+          location: normalizedLocation,
+        },
+        token,
+      });
     } catch (error) {
       console.error("Registration error:", error);
       res.status(500).json({ error: "Registration failed" });
@@ -94,7 +110,13 @@ export function registerAuthRoutes({
       });
 
       res.json({
-        user: { id: user.id, name: user.name, email: user.email },
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          company: user.company ?? null,
+          location: user.location ?? null,
+        },
         token,
       });
     } catch (error) {
@@ -147,10 +169,26 @@ export function registerAuthRoutes({
   app.delete("/api/auth/account", authenticateToken, async (req, res) => {
     try {
       const userId = (req as AuthenticatedRequest).user.id;
+      const { password } = req.body || {};
+      if (!password || typeof password !== "string") {
+        return res.status(400).json({ error: "Password is required to delete account" });
+      }
+
+      const user = await findUserById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "Account not found" });
+      }
+
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+        return res.status(400).json({ error: "Incorrect password" });
+      }
+
       const deleted = await deleteUserById(userId);
       if (!deleted) {
         return res.status(404).json({ error: "Account not found" });
       }
+      await deleteUserAppState(userId);
 
       res.clearCookie("token", {
         httpOnly: true,

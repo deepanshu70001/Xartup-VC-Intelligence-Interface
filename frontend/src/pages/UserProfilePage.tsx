@@ -18,11 +18,14 @@ export default function UserProfilePage() {
   // Here we just show all since we are in a single-session simulation mostly, 
   // or we can filter by 'You' if we set that in AppContext.
   const userActivities = activities.slice(0, 10); // Show last 10
+  const memberSince = userActivities.length
+    ? new Date(userActivities[userActivities.length - 1].timestamp).toLocaleDateString()
+    : new Date().toLocaleDateString();
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-sm overflow-hidden transition-colors">
-        <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
+        <div className="h-32 bg-gradient-to-r from-sky-200 via-cyan-200 to-teal-200 dark:from-neutral-800 dark:via-neutral-700 dark:to-neutral-800"></div>
         <div className="px-8 pb-8">
           <div className="relative flex justify-between items-end -mt-12 mb-6">
             <div className="w-24 h-24 rounded-xl bg-white dark:bg-neutral-900 p-1 transition-colors">
@@ -51,6 +54,9 @@ export default function UserProfilePage() {
                   <MapPin size={16} /> {user.location}
                 </div>
               )}
+              <div className="flex items-center gap-1">
+                <Calendar size={16} /> Member since {memberSince}
+              </div>
             </div>
           </div>
         </div>
@@ -61,10 +67,10 @@ export default function UserProfilePage() {
           <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-sm transition-colors">
             <h3 className="font-semibold text-neutral-900 dark:text-white mb-4">Focus Areas</h3>
             <div className="flex flex-wrap gap-2">
-              <Badge>SaaS</Badge>
-              <Badge>Fintech</Badge>
-              <Badge>AI/ML</Badge>
-              <Badge>DevTools</Badge>
+              <Badge variant="neutral">SaaS</Badge>
+              <Badge variant="neutral">Fintech</Badge>
+              <Badge variant="neutral">AI/ML</Badge>
+              <Badge variant="neutral">DevTools</Badge>
             </div>
           </div>
         </div>

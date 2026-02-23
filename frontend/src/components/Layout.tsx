@@ -1,12 +1,12 @@
 import React from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
-  Building2, 
-  List as ListIcon, 
+  Gauge,
+  Radar,
+  Layers,
   Bookmark, 
-  Bot,
-  Settings,
+  Sparkles,
+  ShieldCheck,
   Search,
   LogOut,
   Menu,
@@ -36,6 +36,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         navigate(`/companies?search=${encodeURIComponent(query.trim())}`);
       }
     }
+  };
+
+  const handleLogout = async () => {
+    const confirmed = window.confirm('Are you sure you want to log out?');
+    if (!confirmed) return;
+    await logout();
   };
 
   return (
@@ -70,18 +76,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
-          <NavItem to="/" icon={<LayoutDashboard size={18} />} label="Dashboard" onClick={() => setIsSidebarOpen(false)} />
-          <NavItem to="/companies" icon={<Building2 size={18} />} label="Companies" onClick={() => setIsSidebarOpen(false)} />
-          <NavItem to="/lists" icon={<ListIcon size={18} />} label="Lists" onClick={() => setIsSidebarOpen(false)} />
-          <NavItem to="/saved" icon={<Bookmark size={18} />} label="Saved Searches" onClick={() => setIsSidebarOpen(false)} />
-          <NavItem to="/scout" icon={<Bot size={18} />} label="Scout Assistant" onClick={() => setIsSidebarOpen(false)} />
+          <NavItem to="/" icon={<Gauge size={18} strokeWidth={2.2} />} label="Dashboard" onClick={() => setIsSidebarOpen(false)} />
+          <NavItem to="/companies" icon={<Radar size={18} strokeWidth={2.2} />} label="Companies" onClick={() => setIsSidebarOpen(false)} />
+          <NavItem to="/lists" icon={<Layers size={18} strokeWidth={2.2} />} label="Lists" onClick={() => setIsSidebarOpen(false)} />
+          <NavItem to="/saved" icon={<Bookmark size={18} strokeWidth={2.2} />} label="Saved Searches" onClick={() => setIsSidebarOpen(false)} />
+          <NavItem to="/scout" icon={<Sparkles size={18} strokeWidth={2.2} />} label="Scout Assistant" onClick={() => setIsSidebarOpen(false)} />
         </nav>
 
         <div className="p-4 border-t border-neutral-100 dark:border-neutral-800 space-y-4">
           <div className="space-y-1">
-            <NavItem to="/settings" icon={<Settings size={18} />} label="Settings" onClick={() => setIsSidebarOpen(false)} />
+            <NavItem to="/settings" icon={<ShieldCheck size={18} strokeWidth={2.2} />} label="Settings" onClick={() => setIsSidebarOpen(false)} />
             <button 
-              onClick={logout}
+              onClick={() => void handleLogout()}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors group"
             >
               <LogOut size={18} className="group-hover:translate-x-1 transition-transform" />

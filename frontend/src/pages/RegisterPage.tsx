@@ -11,7 +11,13 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    company: '',
+    location: '',
+    password: '',
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +96,36 @@ export default function RegisterPage() {
                   className="mt-1 block w-full px-3 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm placeholder-neutral-400 focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:text-white"
                   value={formData.email}
                   onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="company" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                  Company
+                </label>
+                <input
+                  id="company"
+                  name="company"
+                  type="text"
+                  className="mt-1 block w-full px-3 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm placeholder-neutral-400 focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:text-white"
+                  value={formData.company}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, company: e.target.value }))}
+                  placeholder="Your firm or company"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="location" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                  Location
+                </label>
+                <input
+                  id="location"
+                  name="location"
+                  type="text"
+                  className="mt-1 block w-full px-3 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm placeholder-neutral-400 focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 dark:text-white"
+                  value={formData.location}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
+                  placeholder="City, Country"
                 />
               </div>
 

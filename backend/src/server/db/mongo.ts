@@ -32,8 +32,10 @@ export async function initializeMongo() {
   initPromise = (async () => {
     const database = await getMongoDb();
     const users = database.collection("users");
+    const appStates = database.collection("app_states");
     await users.createIndex({ id: 1 }, { unique: true });
     await users.createIndex({ email: 1 }, { unique: true });
+    await appStates.createIndex({ userId: 1 }, { unique: true });
   })();
 
   return initPromise;

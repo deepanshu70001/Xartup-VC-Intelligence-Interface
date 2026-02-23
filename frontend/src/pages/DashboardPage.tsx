@@ -4,16 +4,18 @@ import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   Building2,
-  DollarSign,
+  CheckCircle2,
+  Gauge,
   List as ListIcon,
   Plus,
-  Target,
-  TrendingUp,
-  Zap,
+  Radar,
+  Sparkles,
 } from 'lucide-react';
 import { Button, Badge } from '../components/ui/Primitives';
 import { useApp } from '../context/AppContext';
 import { buildApiUrl, getAuthHeaders, parseApiResponse } from '../lib/api';
+import { getEvaluationScore } from '../lib/evaluation';
+import type { LiveNewsItem } from '../lib/liveFeed';
 
 interface LiveFeedItem {
   id: string;
@@ -26,6 +28,7 @@ interface LiveFeedItem {
   dotColor: string;
   timestamp: number;
   articleUrl?: string;
+  publishedAt?: string;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -155,6 +158,7 @@ export default function DashboardPage() {
             dotColor: getDotColor(company?.industry),
             timestamp: ts,
             articleUrl: entry.url,
+            publishedAt: entry.publishedAt,
           };
         });
 
@@ -188,6 +192,7 @@ export default function DashboardPage() {
         score: getScore(`${company.name}-${signal}`),
         dotColor: getDotColor(company.industry),
         timestamp: ts - idx * 300000,
+        publishedAt: new Date(ts - idx * 300000).toISOString(),
       }));
     });
 
@@ -207,6 +212,7 @@ export default function DashboardPage() {
           score: getScore(`${a.action}-${idx}`),
           dotColor: getDotColor(company?.industry),
           timestamp: ts,
+          publishedAt: new Date(ts).toISOString(),
         };
       });
 
@@ -225,6 +231,7 @@ export default function DashboardPage() {
         score: getScore(`${company.name}-${company.industry}`),
         dotColor: getDotColor(company.industry),
         timestamp: ts,
+        publishedAt: new Date(ts).toISOString(),
       };
     });
   }, [activities, companies]);
@@ -235,28 +242,32 @@ export default function DashboardPage() {
 
   const now = Date.now();
 
-  const companyFitScore = useMemo(() => {
-    return (company: any) => {
-      const industry = String(company.industry || '').toLowerCase();
-      const stage = String(company.stage || '').toLowerCase();
-      const textBlob = [company.description || '', ...(Array.isArray(company.tags) ? company.tags : []), ...(company.enrichment?.keywords || [])]
-        .join(' ')
-        .toLowerCase();
-      let score = 25;
-      const sectorMatches = (thesis?.sectors || []).filter((sector) => industry.includes(String(sector).toLowerCase())).length;
-      const stageMatches = (thesis?.stages || []).filter((targetStage) => stage.includes(String(targetStage).toLowerCase())).length;
-      const keywordMatches = (thesis?.keywords || []).filter((keyword) => textBlob.includes(String(keyword).toLowerCase())).length;
-      score += Math.min(sectorMatches * 18, 36);
-      score += Math.min(stageMatches * 16, 24);
-      score += Math.min(keywordMatches * 7, 21);
-      if (company.enrichment) score += 10;
-      return Math.max(0, Math.min(100, score));
-    };
-  }, [thesis]);
+  const evaluationScoreByCompanyId = useMemo(() => {
+    const byId: Record<string, number> = {};
+    companies.forEach((company) => {
+      const relatedNews: LiveNewsItem[] = internetFeed
+        .filter(
+          (item) =>
+            item.companyId === company.id ||
+            item.name.toLowerCase() === company.name.toLowerCase()
+        )
+        .map((item) => ({
+          id: item.id,
+          company: item.name,
+          title: item.action,
+          source: item.source,
+          url: item.articleUrl || '',
+          publishedAt: item.publishedAt || new Date(item.timestamp).toISOString(),
+        }));
+
+      byId[company.id] = getEvaluationScore(company, thesis, relatedNews);
+    });
+    return byId;
+  }, [companies, internetFeed, thesis]);
 
   const dashboardMetrics = useMemo(() => {
     const totalCompanies = companies.length;
-    const thesisMatches = companies.filter((company) => companyFitScore(company) >= 60).length;
+    const thesisMatches = companies.filter((company) => (evaluationScoreByCompanyId[company.id] ?? 0) >= 60).length;
 
     const recentCompanies = companies.filter((company) => {
       if (!company.createdAt) return false;
@@ -305,7 +316,14 @@ export default function DashboardPage() {
       pipelineTrend: trendFromValues(recentCompanies, previousCompanies, false),
       dealFlowTrend: trendFromValues(recentDealFlow, previousDealFlow, true),
     };
-  }, [companies, companyFitScore, now]);
+  }, [companies, evaluationScoreByCompanyId, now]);
+
+  const scoredLiveFeedItems = useMemo(() => {
+    return liveFeedItems.map((item) => ({
+      ...item,
+      score: item.companyId ? (evaluationScoreByCompanyId[item.companyId] ?? item.score) : item.score,
+    }));
+  }, [liveFeedItems, evaluationScoreByCompanyId]);
 
   const pipelineStageCounts = useMemo(() => {
     const counts = { Watchlist: 0, Outreach: 0, 'Due Diligence': 0, 'Term Sheet': 0 };
@@ -337,14 +355,14 @@ export default function DashboardPage() {
       </motion.div>
 
       <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="Thesis Matches" tone="sky" value={dashboardMetrics.thesisMatches} trend={dashboardMetrics.thesisTrend} trendUp={!dashboardMetrics.thesisTrend.startsWith('-')} icon={<Target size={18} />} description="High conviction signals" />
-        <StatCard label="Pipeline Volume" tone="emerald" value={dashboardMetrics.totalCompanies} trend={dashboardMetrics.pipelineTrend} trendUp={!dashboardMetrics.pipelineTrend.startsWith('-')} icon={<Building2 size={18} />} description="Active companies" />
-        <StatCard label="Est. Deal Flow" tone="amber" value={formatCompactMoney(dashboardMetrics.weightedDealFlow)} trend={dashboardMetrics.dealFlowTrend} trendUp={!dashboardMetrics.dealFlowTrend.startsWith('-')} icon={<DollarSign size={18} />} description="Weighted pipeline value" />
+        <StatCard label="Thesis Matches" tone="sky" value={dashboardMetrics.thesisMatches} trend={dashboardMetrics.thesisTrend} trendUp={!dashboardMetrics.thesisTrend.startsWith('-')} icon={<CheckCircle2 size={18} strokeWidth={2.2} />} description="High conviction signals" />
+        <StatCard label="Pipeline Volume" tone="emerald" value={dashboardMetrics.totalCompanies} trend={dashboardMetrics.pipelineTrend} trendUp={!dashboardMetrics.pipelineTrend.startsWith('-')} icon={<Building2 size={18} strokeWidth={2.2} />} description="Active companies" />
+        <StatCard label="Est. Deal Flow" tone="amber" value={formatCompactMoney(dashboardMetrics.weightedDealFlow)} trend={dashboardMetrics.dealFlowTrend} trendUp={!dashboardMetrics.dealFlowTrend.startsWith('-')} icon={<Gauge size={18} strokeWidth={2.2} />} description="Weighted pipeline value" />
         <StatCard
           label="Active Sectors"
           tone="violet"
           value={dashboardMetrics.activeSectorsList.length}
-          icon={<TrendingUp size={18} />}
+          icon={<Radar size={18} strokeWidth={2.2} />}
           description="Focus areas"
           customBadge={
             <div className="flex -space-x-2 overflow-hidden ml-2">
@@ -362,7 +380,7 @@ export default function DashboardPage() {
         <section className="xl:col-span-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 md:p-6 shadow-sm">
             <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <Zap className="text-amber-500" size={18} />
+              <Sparkles className="text-amber-500" size={18} strokeWidth={2.2} />
               <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">Live Intelligence Feed</h2>
             </div>
             <Link to="/companies" className="text-xs md:text-sm text-sky-700 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-200 font-medium flex items-center">
@@ -371,7 +389,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-1">
-            {liveFeedItems.map((feedItem) => (
+            {scoredLiveFeedItems.map((feedItem) => (
               <React.Fragment key={feedItem.id}>
                 <SignalItem
                   name={feedItem.name}

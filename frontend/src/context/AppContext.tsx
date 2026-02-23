@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Company, List, SavedSearch } from '../types';
 import { MOCK_COMPANIES } from '../data/mock';
 import { v4 as uuidv4 } from 'uuid';
@@ -51,6 +51,32 @@ export interface Activity {
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
+const defaultThesis: Thesis = {
+  sectors: ['AI/ML', 'B2B SaaS', 'Fintech'],
+  stages: ['Seed', 'Series A'],
+  geography: ['North America', 'Europe'],
+  keywords: ['Generative', 'Agentic', 'Infrastructure'],
+  antiPortfolio: ['Crypto', 'D2C'],
+};
+
+interface PersistedAppState {
+  companies: Company[];
+  allLists: List[];
+  allSavedSearches: SavedSearch[];
+  allActivities: Activity[];
+  userFavorites: Record<string, string[]>;
+  userNotes: Record<string, Record<string, string>>;
+  thesis: Thesis;
+}
+
+function readLocalStorageJson<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 function shouldReplaceText(currentValue: string | undefined, incomingValue: string | null, confidence: number) {
   if (!incomingValue || confidence < 0.55) return false;
@@ -60,48 +86,38 @@ function shouldReplaceText(currentValue: string | undefined, incomingValue: stri
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const [isRemoteStateLoaded, setIsRemoteStateLoaded] = useState(false);
+  const [isHydratingRemoteState, setIsHydratingRemoteState] = useState(false);
+  const saveTimerRef = useRef<number | null>(null);
   
   // Initialize state from localStorage or defaults
   const [companies, setCompanies] = useState<Company[]>(() => {
-    const saved = localStorage.getItem('companies');
-    return saved ? JSON.parse(saved) : MOCK_COMPANIES;
+    return readLocalStorageJson<Company[]>('companies', MOCK_COMPANIES);
   });
 
   const [allLists, setAllLists] = useState<List[]>(() => {
-    const saved = localStorage.getItem('lists');
-    return saved ? JSON.parse(saved) : [];
+    return readLocalStorageJson<List[]>('lists', []);
   });
 
   const [allSavedSearches, setAllSavedSearches] = useState<SavedSearch[]>(() => {
-    const saved = localStorage.getItem('savedSearches');
-    return saved ? JSON.parse(saved) : [];
+    return readLocalStorageJson<SavedSearch[]>('savedSearches', []);
   });
 
   const [allActivities, setAllActivities] = useState<Activity[]>(() => {
-    const saved = localStorage.getItem('activities');
-    return saved ? JSON.parse(saved) : [];
+    return readLocalStorageJson<Activity[]>('activities', []);
   });
 
   // User-specific data maps (companyId -> data)
   const [userFavorites, setUserFavorites] = useState<Record<string, string[]>>(() => {
-    const saved = localStorage.getItem('userFavorites');
-    return saved ? JSON.parse(saved) : {};
+    return readLocalStorageJson<Record<string, string[]>>('userFavorites', {});
   });
 
   const [userNotes, setUserNotes] = useState<Record<string, Record<string, string>>>(() => {
-    const saved = localStorage.getItem('userNotes');
-    return saved ? JSON.parse(saved) : {};
+    return readLocalStorageJson<Record<string, Record<string, string>>>('userNotes', {});
   });
 
   const [thesis, setThesis] = useState<Thesis>(() => {
-    const saved = localStorage.getItem('thesis');
-    return saved ? JSON.parse(saved) : {
-      sectors: ['AI/ML', 'B2B SaaS', 'Fintech'],
-      stages: ['Seed', 'Series A'],
-      geography: ['North America', 'Europe'],
-      keywords: ['Generative', 'Agentic', 'Infrastructure'],
-      antiPortfolio: ['Crypto', 'D2C']
-    };
+    return readLocalStorageJson<Thesis>('thesis', defaultThesis);
   });
 
   const [enrichingIds, setEnrichingIds] = useState<string[]>([]);
@@ -146,6 +162,105 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem('thesis', JSON.stringify(thesis));
   }, [thesis]);
+
+  useEffect(() => {
+    if (!user) {
+      setIsRemoteStateLoaded(false);
+      setIsHydratingRemoteState(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsHydratingRemoteState(true);
+
+    const loadRemoteState = async () => {
+      try {
+        const response = await fetch(buildApiUrl('/api/app-state'), {
+          method: 'GET',
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          setIsRemoteStateLoaded(true);
+          return;
+        }
+
+        const data = await parseApiResponse<{ state: PersistedAppState | null }>(response);
+        if (cancelled) return;
+
+        if (data.state) {
+          setCompanies(Array.isArray(data.state.companies) ? data.state.companies : MOCK_COMPANIES);
+          setAllLists(Array.isArray(data.state.allLists) ? data.state.allLists : []);
+          setAllSavedSearches(Array.isArray(data.state.allSavedSearches) ? data.state.allSavedSearches : []);
+          setAllActivities(Array.isArray(data.state.allActivities) ? data.state.allActivities : []);
+          setUserFavorites(data.state.userFavorites || {});
+          setUserNotes(data.state.userNotes || {});
+          setThesis(data.state.thesis || defaultThesis);
+        }
+      } catch {
+        // keep local state when remote cannot be reached
+      } finally {
+        if (!cancelled) {
+          setIsRemoteStateLoaded(true);
+          setIsHydratingRemoteState(false);
+        }
+      }
+    };
+
+    loadRemoteState();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user || !isRemoteStateLoaded || isHydratingRemoteState) return;
+
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+
+    const payload: PersistedAppState = {
+      companies,
+      allLists,
+      allSavedSearches,
+      allActivities,
+      userFavorites,
+      userNotes,
+      thesis,
+    };
+
+    saveTimerRef.current = window.setTimeout(async () => {
+      try {
+        await fetch(buildApiUrl('/api/app-state'), {
+          method: 'PUT',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          credentials: 'include',
+          body: JSON.stringify({ state: payload }),
+        });
+      } catch {
+        // local storage remains fallback
+      }
+    }, 600);
+
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [
+    user?.id,
+    isRemoteStateLoaded,
+    isHydratingRemoteState,
+    companies,
+    allLists,
+    allSavedSearches,
+    allActivities,
+    userFavorites,
+    userNotes,
+    thesis,
+  ]);
 
   const addActivity = (action: string, details: string) => {
     if (!user) return;

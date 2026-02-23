@@ -30,7 +30,7 @@ interface AuthContextType {
   register: (data: unknown) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: unknown) => Promise<void>;
-  deleteAccount: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -154,12 +154,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }, [request]);
 
-  const deleteAccount = useCallback(async () => {
+  const deleteAccount = useCallback(async (password: string) => {
     await request<{ success: boolean }>(
       '/api/auth/account',
       {
         method: 'DELETE',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ password }),
       }
     );
 

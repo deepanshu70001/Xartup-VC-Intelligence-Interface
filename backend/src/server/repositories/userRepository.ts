@@ -49,6 +49,11 @@ export async function findPublicUserById(id: string) {
   return toPublicUser(user);
 }
 
+export async function findUserById(id: string) {
+  const db = await getMongoDb();
+  return db.collection<UserRecord>(USERS_COLLECTION).findOne({ id });
+}
+
 export async function updateUserProfile({
   id,
   name,
