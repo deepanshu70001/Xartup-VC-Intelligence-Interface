@@ -22,6 +22,7 @@ import { BrandLogo } from '../components/BrandLogo';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
 import { SiteFooter } from '../components/SiteFooter';
+import { HeroGraphic } from '../components/HeroGraphic';
 
 const reveal = {
   hidden: { opacity: 0, y: 22 },
@@ -138,8 +139,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="rounded-3xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-xl bg-neutral-900">
             <div className="relative min-h-[620px] lg:min-h-[700px]">
-              <div className="absolute inset-0 bg-[url('/landing-dashboard.png')] bg-cover bg-center scale-[1.03]"></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/95 via-neutral-950/78 to-neutral-900/50"></div>
+              <div className="absolute inset-0 bg-neutral-950">
+                <HeroGraphic />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/95 via-neutral-950/70 to-neutral-900/40"></div>
               <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent"></div>
               <motion.div
                 className="absolute top-20 right-8 lg:right-12 w-52 h-52 rounded-full bg-cyan-400/10 blur-3xl"
@@ -161,7 +164,7 @@ export default function LandingPage() {
                 <motion.div variants={reveal} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-800/75 border border-neutral-600 text-neutral-200 text-xs tracking-wide uppercase">
                   <Gauge size={14} /> Thesis Intelligence Platform
                 </motion.div>
-                <motion.h1 variants={reveal} className="mt-6 text-4xl sm:text-5xl lg:text-7xl font-semibold leading-[1.03] text-white">
+                <motion.h1 variants={reveal} className="mt-6 text-4xl sm:text-5xl lg:text-7xl font-semibold leading-[1.03] tracking-tight text-white drop-shadow-sm">
                   See More Signals.
                   <span className="block text-neutral-300">Move With More Conviction.</span>
                 </motion.h1>
@@ -389,7 +392,7 @@ function DetailCard({
   bullets: string[];
 }) {
   return (
-    <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }} className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 h-full">
+    <motion.div whileHover={{ y: -4, scale: 1.01 }} transition={{ duration: 0.2 }} className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md p-6 h-full shadow-sm hover:shadow-lg dark:hover:border-neutral-700">
       <div className="w-10 h-10 rounded-xl border border-sky-200/80 dark:border-sky-800/50 text-sky-700 dark:text-sky-300 bg-gradient-to-br from-sky-50 to-cyan-100 dark:from-sky-900/30 dark:to-cyan-900/20 flex items-center justify-center shadow-sm">
         {icon}
       </div>
@@ -409,7 +412,7 @@ function DetailCard({
 
 function StepChip({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
-    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 p-3">
+    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/50 backdrop-blur-sm p-3 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors">
       <div className="flex items-center gap-2 text-sm font-medium text-neutral-900 dark:text-white">
         {icon}
         <span>{title}</span>
@@ -421,8 +424,8 @@ function StepChip({ icon, title, text }: { icon: React.ReactNode; title: string;
 
 function PulseTile({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-      <div className="w-8 h-8 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 flex items-center justify-center">{icon}</div>
+    <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 backdrop-blur-sm p-4 hover:border-neutral-700 transition-colors">
+      <div className="w-8 h-8 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.2)]">{icon}</div>
       <div className="mt-3 text-white font-medium">{title}</div>
       <p className="mt-1 text-sm text-neutral-300">{text}</p>
     </div>

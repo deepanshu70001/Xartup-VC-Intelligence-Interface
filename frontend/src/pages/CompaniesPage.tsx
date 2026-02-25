@@ -77,11 +77,10 @@ export default function CompaniesPage() {
   const evaluationScoreByCompanyId = useMemo(() => {
     return Object.fromEntries(
       companies.map((company) => {
-        const newsItems = liveItemsByCompany[getCompanyKey(company.name)] || [];
-        return [company.id, getEvaluationScore(company, thesis, newsItems)];
+        return [company.id, getEvaluationScore(company, thesis)];
       })
     );
-  }, [companies, liveItemsByCompany, thesis]);
+  }, [companies, thesis]);
 
   useEffect(() => {
     const query = searchParams.get('search');
@@ -192,7 +191,7 @@ export default function CompaniesPage() {
         Domain: c.domain,
         Industry: c.industry,
         Stage: c.stage,
-        Evaluation: evaluationScoreByCompanyId[c.id] ?? getEvaluationScore(c, thesis, []),
+        Evaluation: evaluationScoreByCompanyId[c.id] ?? getEvaluationScore(c, thesis),
         Tags: Array.isArray(c.tags) ? c.tags.join(', ') : '',
         Description: c.description,
         Enriched: c.enrichment ? 'Yes' : 'No',
@@ -254,9 +253,22 @@ export default function CompaniesPage() {
     (advancedFilters.employeeRanges?.length || 0) +
     (advancedFilters.industry && advancedFilters.industry !== 'All' ? 1 : 0);
 
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.05 },
+    },
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 15 },
+    show: { opacity: 1, y: 0 },
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 max-w-7xl mx-auto pb-12">
+      <motion.div variants={item} className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-white">Companies</h1>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1">
@@ -273,16 +285,16 @@ export default function CompaniesPage() {
           <Button variant="outline" onClick={handleSaveSearch}><Heart size={16} className="mr-2" /> Save Search</Button>
           <Button onClick={() => setIsAddModalOpen(true)}><Plus size={16} className="mr-2" /> Add Company</Button>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <WorkflowStep index="01" title="Discover" description="Search and filter targets." />
         <WorkflowStep index="02" title="Open Profile" description="Review company fit quickly." />
         <WorkflowStep index="03" title="Enrich" description="Fetch live public web signals." />
         <WorkflowStep index="04" title="Take Action" description="Save, note, follow, export." />
-      </div>
+      </motion.div>
 
-      <div className="flex flex-col lg:flex-row gap-4 justify-between lg:items-center bg-white dark:bg-neutral-900 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+      <motion.div variants={item} className="flex flex-col lg:flex-row gap-4 justify-between lg:items-center bg-white dark:bg-neutral-900 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-sm surface-pop">
         <div className="flex flex-wrap gap-2 items-center w-full lg:w-auto">
           <Button
             variant="secondary"
@@ -309,7 +321,7 @@ export default function CompaniesPage() {
             className="w-full pl-9 pr-4 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
           />
         </div>
-      </div>
+      </motion.div>
 
       {selectedIds.size > 0 && (
         <motion.div
@@ -325,16 +337,16 @@ export default function CompaniesPage() {
         </motion.div>
       )}
 
-      <div className="flex items-center gap-2 px-1 py-1 text-sm text-neutral-500">
-        <button onClick={toggleSelectAllPage} className="flex items-center gap-2 hover:text-neutral-900 transition-colors">
+      <motion.div variants={item} className="flex items-center gap-2 px-1 py-1 text-sm text-neutral-500">
+        <button onClick={toggleSelectAllPage} className="flex items-center gap-2 hover:text-neutral-900 dark:hover:text-neutral-200 transition-colors">
           {paginatedCompanies.length > 0 && paginatedCompanies.every((c) => selectedIds.has(c.id))
             ? <CheckSquare size={18} className="text-indigo-600" />
             : <Square size={18} />}
           Select Page
         </button>
-      </div>
+      </motion.div>
 
-      <div className="overflow-x-auto bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-sm">
+      <motion.div variants={item} className="overflow-x-auto bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-sm surface-pop">
         <table className="min-w-full text-sm">
           <thead className="border-b border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400">
             <tr>
@@ -351,10 +363,16 @@ export default function CompaniesPage() {
           </thead>
           <tbody>
             {paginatedCompanies.map((company: any) => {
-              const evalScore = evaluationScoreByCompanyId[company.id] ?? getEvaluationScore(company, thesis, []);
+              const evalScore = evaluationScoreByCompanyId[company.id] ?? getEvaluationScore(company, thesis);
               const tags = Array.isArray(company.tags) ? company.tags : [];
 
-              return <tr key={company.id} className="border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+              return <motion.tr
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2 }}
+                key={company.id}
+                className="border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors"
+              >
                 <td className="px-4 py-3">
                   <button onClick={() => toggleSelection(company.id)}>
                     {selectedIds.has(company.id)
@@ -392,7 +410,7 @@ export default function CompaniesPage() {
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <a href={`https://${company.domain}`} target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">{company.domain}</a>
+                  <a href={`https://${company.domain}`} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">{company.domain}</a>
                 </td>
                 <td className="px-4 py-3 text-neutral-500">{company.createdAt ? new Date(company.createdAt).toLocaleDateString() : '-'}</td>
                 <td className="px-4 py-3">
@@ -413,11 +431,11 @@ export default function CompaniesPage() {
                     <Link to={`/companies/${company.id}`}><Button variant="ghost" size="sm">Open</Button></Link>
                   </div>
                 </td>
-              </tr>;
+              </motion.tr>;
             })}
           </tbody>
         </table>
-      </div>
+      </motion.div>
 
       {sortedCompanies.length === 0 && (
         <div className="text-center py-12 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 border-dashed">
@@ -429,7 +447,7 @@ export default function CompaniesPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between text-sm text-neutral-500">
+      <motion.div variants={item} className="flex items-center justify-between text-sm text-neutral-500">
         <span>
           Showing {sortedCompanies.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, sortedCompanies.length)} of {sortedCompanies.length}
         </span>
@@ -438,7 +456,7 @@ export default function CompaniesPage() {
           <span className="text-xs">Page {currentPage} / {totalPages}</span>
           <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage((p) => p + 1)}>Next</Button>
         </div>
-      </div>
+      </motion.div>
 
       <AddCompanyModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
       <FilterModal
@@ -447,16 +465,16 @@ export default function CompaniesPage() {
         onApply={setAdvancedFilters}
         activeFilters={advancedFilters}
       />
-    </div>
+    </motion.div>
   );
 }
 
 function WorkflowStep({ index, title, description }: { index: string; title: string; description: string }) {
   return (
-    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 shadow-sm">
+    <motion.div whileHover={{ y: -2, scale: 1.02 }} className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 shadow-sm surface-pop">
       <div className="text-[11px] font-semibold tracking-wide uppercase text-indigo-600 dark:text-indigo-400">{index}</div>
       <div className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">{title}</div>
       <div className="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">{description}</div>
-    </div>
+    </motion.div>
   );
 }

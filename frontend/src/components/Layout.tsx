@@ -1,10 +1,10 @@
 import React from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { 
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import {
   Gauge,
   Radar,
   Layers,
-  Bookmark, 
+  Bookmark,
   Sparkles,
   ShieldCheck,
   Search,
@@ -24,9 +24,10 @@ import { SiteFooter } from './SiteFooter';
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const initials = user?.name 
-    ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() 
+  const initials = user?.name
+    ? user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
     : 'U';
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -47,11 +48,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-sans transition-colors ambient-shell">
       <CommandPalette />
-      
+
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -86,7 +87,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="p-4 border-t border-neutral-100 dark:border-neutral-800 space-y-4">
           <div className="space-y-1">
             <NavItem to="/settings" icon={<ShieldCheck size={18} strokeWidth={2.2} />} label="Settings" onClick={() => setIsSidebarOpen(false)} />
-            <button 
+            <button
               onClick={() => void handleLogout()}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors group"
             >
@@ -100,32 +101,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-950 transition-colors relative z-10">
         {/* Header */}
-        <header className="h-16 border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 transition-colors z-10 sticky top-0">
+        <header className="h-16 border-b border-neutral-200 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl flex items-center justify-between px-4 sm:px-6 transition-colors z-20 sticky top-0 shadow-sm">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               className="lg:hidden text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu size={24} />
             </button>
             <div className="lg:hidden flex items-center gap-2 mr-2">
-                <BrandLogo compact />
+              <BrandLogo compact />
             </div>
             <div className="flex items-center w-full max-w-xs sm:max-w-md bg-neutral-100 dark:bg-neutral-800 rounded-full px-4 py-2 transition-colors focus-within:ring-2 focus-within:ring-neutral-500/20">
               <Search size={18} className="text-neutral-400 mr-2 flex-shrink-0" />
-              <input 
-                type="text" 
-                placeholder="Search..." 
+              <input
+                type="text"
+                placeholder="Search..."
                 className="bg-transparent border-none focus:outline-none text-sm w-full placeholder:text-neutral-400 text-neutral-900 dark:text-white"
                 onKeyDown={handleSearch}
               />
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:gap-4">
             <NotificationCenter />
             <Link to="/profile">
-              <motion.div 
+              <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="w-9 h-9 bg-neutral-900 dark:bg-neutral-200 rounded-full flex items-center justify-center text-white dark:text-neutral-900 font-medium text-sm shadow-sm cursor-pointer border border-neutral-800 dark:border-neutral-300"
@@ -138,14 +139,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Page Content */}
         <div className="flex-1 overflow-auto p-6 scroll-smooth">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="motion-rise"
-          >
-            {children}
-          </motion.div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
           <SiteFooter />
         </div>
       </main>

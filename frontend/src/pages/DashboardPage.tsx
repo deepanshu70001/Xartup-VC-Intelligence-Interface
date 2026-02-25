@@ -58,9 +58,9 @@ function parseFundingToNumber(value?: string): number {
   const suffix = match[2] || '';
   const multiplier =
     suffix === 'K' ? 1_000 :
-    suffix === 'M' ? 1_000_000 :
-    suffix === 'B' ? 1_000_000_000 :
-    suffix === 'T' ? 1_000_000_000_000 : 1;
+      suffix === 'M' ? 1_000_000 :
+        suffix === 'B' ? 1_000_000_000 :
+          suffix === 'T' ? 1_000_000_000_000 : 1;
   return amount * multiplier;
 }
 
@@ -260,10 +260,10 @@ export default function DashboardPage() {
           publishedAt: item.publishedAt || new Date(item.timestamp).toISOString(),
         }));
 
-      byId[company.id] = getEvaluationScore(company, thesis, relatedNews);
+      byId[company.id] = getEvaluationScore(company, thesis);
     });
     return byId;
-  }, [companies, internetFeed, thesis]);
+  }, [companies, thesis]);
 
   const dashboardMetrics = useMemo(() => {
     const totalCompanies = companies.length;
@@ -284,10 +284,10 @@ export default function DashboardPage() {
       const stage = String(company.stage || '').toLowerCase();
       const weight =
         stage.includes('seed') ? 0.2 :
-        stage.includes('series a') ? 0.35 :
-        stage.includes('series b') ? 0.5 :
-        stage.includes('series c') || stage.includes('series d') || stage.includes('late') ? 0.65 :
-        stage.includes('public') ? 0.8 : 0.3;
+          stage.includes('series a') ? 0.35 :
+            stage.includes('series b') ? 0.5 :
+              stage.includes('series c') || stage.includes('series d') || stage.includes('late') ? 0.65 :
+                stage.includes('public') ? 0.8 : 0.3;
       return acc + funding * weight;
     }, 0);
 
@@ -377,8 +377,8 @@ export default function DashboardPage() {
       </motion.div>
 
       <motion.div variants={item} className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
-        <section className="xl:col-span-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 md:p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
+        <section className="xl:col-span-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 md:p-6 shadow-sm surface-pop">
+          <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <Sparkles className="text-amber-500" size={18} strokeWidth={2.2} />
               <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">Live Intelligence Feed</h2>
@@ -407,7 +407,7 @@ export default function DashboardPage() {
         </section>
 
         <div className="space-y-4 md:space-y-6">
-          <section className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 md:p-6 shadow-sm">
+          <section className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 md:p-6 shadow-sm surface-pop">
             <h2 className="text-lg font-semibold text-neutral-900 dark:text-white mb-4">Pipeline Stages</h2>
             <div className="space-y-3">
               <PipelineStage label="Watchlist" count={pipelineStageCounts.Watchlist} tone="neutral" />
@@ -417,7 +417,7 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 md:p-6 shadow-sm">
+          <section className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 md:p-6 shadow-sm surface-pop">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">Saved Searches</h2>
               <Link to="/saved" className="text-xs text-neutral-600 dark:text-neutral-300 hover:underline">View all</Link>
@@ -427,11 +427,11 @@ export default function DashboardPage() {
               {savedSearches.length > 0 ? (
                 savedSearches.slice(0, 4).map((search) => (
                   <Link
-                      key={search.id}
-                      to={`/companies?savedSearchId=${search.id}`}
-                      className="flex items-center justify-between p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
+                    key={search.id}
+                    to={`/companies?savedSearchId=${search.id}`}
+                    className="flex items-center justify-between p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/25 flex items-center justify-center text-sky-700 dark:text-sky-300">
                         <ListIcon size={14} />
                       </div>
@@ -481,7 +481,7 @@ function StatCard({
   } as const;
 
   return (
-    <motion.div whileHover={{ y: -2 }} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-sm">
+    <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ duration: 0.2 }} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-sm surface-pop">
       <div className="flex justify-between items-start mb-2">
         <div className="text-neutral-500 dark:text-neutral-400 font-medium text-xs uppercase tracking-wide">{label}</div>
         <div className={`p-2 rounded-lg ${toneStyles[tone]}`}>{icon}</div>
@@ -521,7 +521,7 @@ function SignalItem({
 }) {
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
     articleUrl ? (
-      <a href={articleUrl} target="_blank" rel="noreferrer">{children}</a>
+      <a href={articleUrl} target="_blank" rel="noopener noreferrer">{children}</a>
     ) : companyId ? (
       <Link to={`/companies/${companyId}`}>{children}</Link>
     ) : (
@@ -530,7 +530,10 @@ function SignalItem({
 
   return (
     <Wrapper>
-      <div className="flex items-center justify-between py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 px-2 md:px-3 -mx-2 md:-mx-3 rounded-lg transition-colors">
+      <motion.div
+        whileHover={{ x: 4, backgroundColor: 'rgba(0,0,0,0.02)' }}
+        className="flex items-center justify-between py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 px-2 md:px-3 -mx-2 md:-mx-3 rounded-lg transition-colors cursor-pointer"
+      >
         <div className="flex items-center gap-3 min-w-0">
           <div className={`w-2 h-2 rounded-full ${dotColor} flex-shrink-0`}></div>
           <div className="min-w-0">
@@ -548,7 +551,7 @@ function SignalItem({
           </div>
           <div className="text-xs text-neutral-400 w-12 text-right">{time}</div>
         </div>
-      </div>
+      </motion.div>
     </Wrapper>
   );
 }

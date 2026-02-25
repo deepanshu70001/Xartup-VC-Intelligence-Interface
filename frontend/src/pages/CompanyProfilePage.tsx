@@ -159,8 +159,8 @@ export default function CompanyProfilePage() {
   };
 
   const evaluationScore = useMemo(() => {
-    return getEvaluationScore(company, thesis, liveItems);
-  }, [company, liveItems, thesis]);
+    return getEvaluationScore(company, thesis);
+  }, [company, thesis]);
 
   const momentum = useMemo(() => {
     const now = Date.now();
@@ -427,7 +427,7 @@ export default function CompanyProfilePage() {
                   key={item.id}
                   href={item.url}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="block rounded-lg border border-neutral-200 dark:border-neutral-800 p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
                 >
                   <p className="text-sm text-neutral-900 dark:text-neutral-100">{item.title}</p>
@@ -519,7 +519,7 @@ function TimelineItem({
         <div className="flex items-center gap-2 mb-1">
           <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
             {link ? (
-              <a href={link} target="_blank" rel="noreferrer" className="hover:underline">
+              <a href={link} target="_blank" rel="noopener noreferrer" className="hover:underline">
                 {title}
               </a>
             ) : (

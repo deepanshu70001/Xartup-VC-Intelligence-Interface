@@ -28,49 +28,57 @@ function countRecentNews(items: LiveNewsSignal[], nowMs: number, days: number) {
 
 export function getEvaluationScore(
   company: Company,
-  thesis: Thesis | undefined,
-  liveNewsItems: LiveNewsSignal[] = [],
-  nowMs = Date.now()
+  thesis: Thesis | undefined
 ) {
-  let score = 20;
+  let score = 0;
+
+  // 1. Data Completeness Baseline (Max 15 points)
+  if (company.description && company.description.length > 20) score += 5;
+  if (company.domain) score += 5;
+  if (company.enrichment) score += 5;
 
   const industry = normalizedText(company.industry);
   const stage = normalizedText(company.stage);
   const textBlob = [
     company.description || "",
     ...(Array.isArray(company.tags) ? company.tags : []),
+    company.description || "",
+    ...(Array.isArray(company.tags) ? company.tags : []),
     ...(company.enrichment?.keywords || []),
-    ...(company.enrichment?.derived_signals || []),
-    ...liveNewsItems.map((item) => item.title || ""),
+    ...(company.enrichment?.derived_signals || [])
   ]
     .join(" ")
     .toLowerCase();
 
+  // 2. Anti-Portfolio Penalty (Massive impact if true)
+  const antiPortfolioMatches = (thesis?.antiPortfolio || []).filter((keyword) =>
+    industry.includes(normalizedText(keyword)) || textBlob.includes(normalizedText(keyword))
+  ).length;
+  if (antiPortfolioMatches > 0) {
+    score -= Math.min(antiPortfolioMatches * 30, 60);
+  }
+
+  // 3. Thesis Matches (Max 60 points)
   const sectorMatches = (thesis?.sectors || []).filter((sector) =>
     industry.includes(normalizedText(sector))
   ).length;
-  score += Math.min(sectorMatches * 12, 24);
+  score += Math.min(sectorMatches * 15, 25);
 
   const stageMatches = (thesis?.stages || []).filter((targetStage) =>
     stage.includes(normalizedText(targetStage))
   ).length;
-  score += Math.min(stageMatches * 10, 20);
+  score += Math.min(stageMatches * 15, 20); // increased target weight
 
   const keywordMatches = (thesis?.keywords || []).filter((keyword) =>
     textBlob.includes(normalizedText(keyword))
   ).length;
-  score += Math.min(keywordMatches * 3, 15);
+  score += Math.min(keywordMatches * 5, 25); // increased target weight
 
-  const sourceScore = Math.min((company.enrichment?.sources?.length || 0) * 2, 10);
-  const enrichmentSignalScore = Math.min((company.enrichment?.derived_signals?.length || 0) * 2, 10);
+  // 4. Enrichment Depth (Max 15 points)
+  const sourceScore = Math.min((company.enrichment?.sources?.length || 0) * 2, 5);
+  const enrichmentSignalScore = Math.min((company.enrichment?.derived_signals?.length || 0) * 2, 5);
   const enrichmentKeywordScore = Math.min((company.enrichment?.keywords?.length || 0), 5);
   score += sourceScore + enrichmentSignalScore + enrichmentKeywordScore;
-
-  const totalNewsScore = Math.min(liveNewsItems.length * 2, 8);
-  const recent7d = countRecentNews(liveNewsItems, nowMs, 7);
-  const recent30d = countRecentNews(liveNewsItems, nowMs, 30);
-  const recencyScore = Math.min(recent7d * 3 + Math.max(0, recent30d - recent7d), 8);
-  score += totalNewsScore + recencyScore;
 
   return clamp(Math.round(score), 0, 100);
 }

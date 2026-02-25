@@ -28,7 +28,7 @@ export function AddCompanyModal({ isOpen, onClose }: AddCompanyModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       // Basic validation
       if (!formData.name || !formData.domain) {
@@ -95,7 +95,8 @@ export function AddCompanyModal({ isOpen, onClose }: AddCompanyModalProps) {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-neutral-900 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-800 z-50 p-6"
+            transition={{ type: "spring", duration: 0.5, bounce: 0.2 }}
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 z-50 p-6"
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Add Company</h2>
@@ -116,7 +117,7 @@ export function AddCompanyModal({ isOpen, onClose }: AddCompanyModalProps) {
                   placeholder="e.g. Acme Corp"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Domain</label>
                 <input
