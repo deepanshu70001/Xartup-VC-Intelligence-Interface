@@ -12,24 +12,24 @@ export default defineConfig(({ mode }) => {
       outDir: path.resolve(__dirname, '../dist'),
       emptyOutDir: true,
       chunkSizeWarningLimit: 1000,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-                return 'react-vendor';
-              }
-              if (id.includes('framer-motion')) {
-                return 'framer-motion';
-              }
-              if (id.includes('lucide-react')) {
-                return 'lucide-react';
-              }
-              return 'vendor';
-            }
-          }
-        }
-      }
+      // rollupOptions: {
+      //   output: {
+      //     manualChunks(id) {
+      //       if (id.includes('node_modules')) {
+      //         if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+      //           return 'react-vendor';
+      //         }
+      //         if (id.includes('framer-motion')) {
+      //           return 'framer-motion';
+      //         }
+      //         if (id.includes('lucide-react')) {
+      //           return 'lucide-react';
+      //         }
+      //         return 'vendor';
+      //       }
+      //     }
+      //   }
+      // }
     },
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
